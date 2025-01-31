@@ -5,16 +5,27 @@ class RolloutWorker():
             worker_id: int, 
             env, 
             policy, 
-            rollout_length=200
             ):
         
         self.worker_id = worker_id
         self.env = env
         self.policy = policy
-        self.rollout_length = rollout_length
     
     def run_episode(self, 
-                    max_steps: int = 500
+                    max_steps: int = 500,
+                    num_episodes: int = 5,
                 ):
         
+        self.env.reset()
+        done = False
+        
+        for _ in range(num_episodes):
+            
+            while not done and self.env.steps < max_steps:
+                action = self.policy(self.env.state)
+                state, reward, done = self.env.step(action)
+
+            self.env.restart() # Reset the environment to the initial state when reset was last called
+            
+
         pass
