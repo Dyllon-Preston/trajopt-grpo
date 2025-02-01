@@ -1,0 +1,5 @@
+# Ignore pycache
+__pycache__/
+
+# Ignore Tests
+.pytest_cache/

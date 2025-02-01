@@ -16,27 +16,41 @@ class RolloutManger:
         self.num_workers = num_workers
         self.max_steps = max_steps
 
-    
-        # Create a list of worker ids
-        self.worker_ids = list(range(num_workers))
-        # Create a list of worker objects with unique ids and environments
-        self.workers = []
-        for worker_id in self.worker_ids:
-            self.workers.append(
-                worker_class(worker_id, env_fn(), policy)
-            )
-        
-        # Create a persistent pool of worker processes
-        self.pool = mp.Pool(num_workers)
+        self.task_queue = mp.Queue()
+        self.result_queue = mp.Queue()
+
+        self.processes = []
+        for i in range(num_workers):
+            env = env_fn()
+            worker = worker_class(i, env, policy)
+            p = mp.Process(target=self._worker_process, args=(worker,))
+            p.start()
+            self.processes.append(p)
 
     def _worker_process(self, 
                         worker
                         ):
-        return worker.run_epsisode(self.max_steps)
+        
+        
+        while True:
+            task = self.task_queue.get()
+            if task == "ROLLOUT":
+                result = worker.run_episodes()
+                self.result_queue.put((worker, result))
+            
+            elif task == "SHUTDOWN":
+                break
     
     def rollout(self):
-        rollouts = self.pool.map(self._worker_process, self.workers)
-        return rollouts
+        
+        for _ in range(self.num_workers):
+            self.task_queue.put("ROLLOUT")
+
+        rollouts = []
+        for _ in range(self.num_workers):
+            worker_id, worker_result = self.result_queue.get()
+            rollouts.append(self.result_queue.get())
+        
 
     def shutdown(self):
         self.pool.close()

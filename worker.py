@@ -11,7 +11,7 @@ class RolloutWorker():
         self.env = env
         self.policy = policy
     
-    def run_episode(self, 
+    def run_episodes(self, 
                     max_steps: int = 500,
                     num_episodes: int = 5,
                 ):

@@ -1,32 +1,8 @@
-"""
-An environment class that wraps a gym environment and adds some additional functionality
-"""
-
-import gym
 import numpy as np
+    
+from environments.env import Env
 
-class Environment():
-    def __init__(self, env_name: str):
-        self.env = gym.make(env_name)
-        self.observation_space = self.env.observation_space
-        self.action_space = self.env.action_space
-        
-    def reset(self):
-        raise NotImplementedError
-    
-    def restart(self):
-        """
-        Reset the environment to the initial state when reset was last called
-        """
-        raise NotImplementedError
-    
-    def step(self, action):
-        raise NotImplementedError
-    
-    def render(self):
-        raise NotImplementedError
-    
-class Quadrotor(Environment):
+class Quadrotor(Env):
     def __init__(
             self,
             mass: float=1.0, # kg
@@ -43,7 +19,6 @@ class Quadrotor(Environment):
             obstacle_radius_bounds: tuple=(0.1, 0.2), # m
             goal_radius: float=0.1, # m
                  ):
-        super().__init__('Quadrotor')
 
         # Quadrotor parameters
         self.mass = mass
@@ -88,7 +63,10 @@ class Quadrotor(Environment):
         Returns:
             state (array): A 12x1 array of the state of the environment
         """
-        pass
+        
+        for key in self.state_dict:
+            state = np.vstack(self.state_dict[key])
+
 
 
 
@@ -192,6 +170,6 @@ class Quadrotor(Environment):
     def render(self):
         return self.env.render()
     
+
 class QuadrotorSwarm(Quadrotor):
     pass
-
