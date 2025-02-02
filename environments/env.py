@@ -1,21 +1,31 @@
+import gym
 import abc
 from typing import Any, Tuple, Dict
 
+
 """
-A base class for defining environments in reinforcement learning. Inspired by OpenAI Gym.
+Extension of the gym.Env class to include a restart method.
 """
 
-class Env(abc.ABC):
+class Env(gym.Env, abc.ABC):
     def __init__(self, env_name: str) -> None:
         """
-        Initialize the environment with a name.
+        Initialize the environment with a name and any necessary setup.
         """
+        super().__init__()  # Initialize gym.Env
         self.env_name = env_name
 
     @abc.abstractmethod
     def reset(self) -> Any:
         """
         Reset the environment to an initial state and return the first observation.
+        Gym's reset() method has been modified to return the observation.
+
+        Args:
+            None
+
+        Returns:
+            observation: The initial observation of the space.
         """
         pass
 
@@ -24,7 +34,12 @@ class Env(abc.ABC):
         """
         Reset the environment to the state it was in at the last call to reset.
         This is useful when you want to restart from a known initial state.
-        Return the observation at the restart.
+
+        Args:
+            None
+
+        Returns:
+            None
         """
         pass
 
@@ -52,14 +67,12 @@ class Env(abc.ABC):
         """
         pass
 
-    # @abc.abstractmethod
     # def close(self) -> None:
     #     """
     #     Clean up the environment's resources.
     #     """
     #     pass
 
-    # @abc.abstractmethod
     # def seed(self, seed: int) -> None:
     #     """
     #     Seed the environment's random number generator.

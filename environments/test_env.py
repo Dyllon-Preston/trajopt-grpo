@@ -1,5 +1,6 @@
 import numpy as np
 from environments.env import Env
+import gymnasium as gym
 
 """
 A test environment for the purpose of testing the environment class.
@@ -9,11 +10,12 @@ class EnvTest(Env):
     def __init__(
             self,
             timestep: float=0.05, # s
-            max_time: float=10.0, # s      
+            max_steps: int=200,    
             ):
         
         self.timestep = timestep
-        self.max_time = max_time
+        self.max_steps = max_steps
+        self.max_time = max_steps*timestep
 
         self.state_dict = {
             'test': np.zeros(2)
@@ -23,6 +25,12 @@ class EnvTest(Env):
 
         self._time = 0
         self._steps = 0
+
+        # Define the observation and action spaces
+        self.observation_space = gym.spaces.Box(
+            low=-1, high=1, shape=(2,), dtype=np.float32)
+        self.action_space = gym.spaces.Box(
+            low=-1, high=1, shape=(2,), dtype=np.float32)
 
     def _dynamics(
             self,
@@ -41,9 +49,13 @@ class EnvTest(Env):
     def reset(self):
         self.state_dict['test'] = np.random.rand(2)
         self._initial_state = self.state_dict.copy()
+
+        return self._get_obs(), self._get_info()
     
     def restart(self):
         self.state_dict = self._initial_state.copy()
+
+        return self._get_obs(), self._get_info()
 
     def _get_obs(self):
         return self.state_dict['test']

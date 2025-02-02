@@ -1,6 +1,7 @@
 import numpy as np
     
 from environments.env import Env
+import gymnasium as gym
 
 class Quadrotor(Env):
     def __init__(
@@ -13,7 +14,7 @@ class Quadrotor(Env):
             torque_constant: float=0.017,
             gravity: float=9.80665, # m/s²
             timestep: float=0.05, # s
-            max_time: float=10.0, # s
+            max_steps: int=200,
             num_obstacles: int=0,
             spatial_bounds: tuple=((-5, 5), (-5, 5), (-5, 5)), # m
             obstacle_radius_bounds: tuple=(0.1, 0.2), # m
@@ -33,8 +34,8 @@ class Quadrotor(Env):
         self._hover_thrust = mass*gravity/4
 
 
-
-        self.max_time = max_time
+        self.max_steps = max_steps
+        self.max_time = max_steps*timestep
 
         # Environment parameters
         self.num_obstacles = num_obstacles
@@ -53,6 +54,16 @@ class Quadrotor(Env):
         }
 
         self._initial_state = None
+
+        self._steps = 0
+
+        # Define the observation and action spaces
+        # self.observation_space = gym.spaces.Box(
+        #     low=-5, high=5, shape=(12,), dtype=np.float32)
+        # self.action_space = gym.spaces.Box(
+        #     low=-1, high=1, shape=(4,), dtype=np.float32)
+        
+        
     
     def _pack_state(self):
         """

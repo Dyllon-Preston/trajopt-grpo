@@ -1,6 +1,7 @@
 import numpy as np
 from environments.env import Env
 from matplotlib import patches
+import gymnasium as gym
 
 class CartPole(Env):
     def __init__(
@@ -10,7 +11,7 @@ class CartPole(Env):
             length: float=0.5, # m
             gravity: float=9.80665, # m/s²
             timestep: float=0.05, # s
-            max_time: float=10.0, # s
+            max_steps: int=200,
             ):
 
         # CartPole parameters
@@ -19,7 +20,8 @@ class CartPole(Env):
         self.length = length
         self.gravity = gravity
         self.timestep = timestep
-        self.max_time = max_time
+        self.max_steps = max_steps
+        self.max_time = max_steps*timestep
 
         self._initial_state = None
 
@@ -31,13 +33,23 @@ class CartPole(Env):
             'cartpole': np.zeros(5)
         }
 
-        
+        # Define the observation and action spaces
+        self.observation_space = gym.spaces.Box(
+            low=-3, high=3, shape=(5,), dtype=np.float32)
+        self.action_space = gym.spaces.Box(
+            low=-1, high=1, shape=(1,), dtype=np.float32)
+
+    def _wrap_action(self, action):
+        return np.clip(action, -1, 1)
+
     def _dynamics(
             self,
             state,
             control):
         
         x, xdot, sin_theta, cos_theta, thetadot = state
+
+        control = control[0]
 
         masscart = self.masscart
         masspole = self.masspole
@@ -88,11 +100,15 @@ class CartPole(Env):
         self._steps = 0
         self._time = 0
 
+        return self._get_obs(), self._get_info()
+
     def restart(self):
         self.state_dict = self._initial_state.copy()
 
         self._steps = 0
         self._time = 0
+
+        return self._get_obs(), self._get_info()
 
     def _get_obs(self):
         return self.state_dict['cartpole']
@@ -105,6 +121,8 @@ class CartPole(Env):
     def step(self, action):
 
         reward = 0
+
+        action = self._wrap_action(action)
 
         self._propegate_cartpole(self.state_dict['cartpole'], action)
 
@@ -125,10 +143,10 @@ class CartPole(Env):
             1, # Reward for staying alive
             1/(1 + x**2), # Reward for staying near the center
             1/(1 + theta**2), # Reward for keeping the pole upright
-            1/(1 + action**2) # Reward for using less control
+            1/(1 + np.sum(action**2)) # Reward for using less control
         ])
 
-        truncated = (np.abs(x) > 1) or (self._time > self.max_time)
+        truncated = (np.abs(x) > 3) or (self._time > self.max_time)
         terminated = self._time_balanced > 5
 
         if truncated:
@@ -148,7 +166,7 @@ class CartPole(Env):
         x, xdot, sin_theta, cos_theta, thetadot = self.state_dict['cartpole']
         theta = np.arctan2(sin_theta, cos_theta)
 
-        ax.set_xlim([-1, 1])
+        ax.set_xlim([-3, 3])
         ax.set_ylim([-0.5, 1])
         ax.set_xticks([])
         ax.set_yticks([])

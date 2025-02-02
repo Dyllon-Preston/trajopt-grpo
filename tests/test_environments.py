@@ -27,19 +27,30 @@ def test_environment_step(env):
     
     observation, reward, terminated, truncated, info = env.step(action)
     
-    assert isinstance(observation, np.ndarray)  # Observation should be a numpy array
-    assert isinstance(reward, float)  # Reward should be a float
-    assert isinstance(terminated, bool)  # terminated should be a boolean
-    assert isinstance(truncated, bool)  # truncated should be a boolean
-    assert isinstance(info, dict)  # Info should be a dictionary
+    # Check the types of the outputs
+    assert isinstance(observation, np.ndarray), \
+        f"Observation type is {type(observation)}, expected np.ndarray"
+    assert isinstance(reward, float), \
+        f"Reward type is {type(reward)}, expected float"
+    assert isinstance(terminated, bool), \
+        f"Terminated type is {type(terminated)}, expected bool"
+    assert isinstance(truncated, bool), \
+        f"Truncated type is {type(truncated)}, expected bool"
+    assert isinstance(info, dict), \
+        f"Info type is {type(info)}, expected dict"
 
 def test_environment_termination(env):
     """Ensure the environment correctly handles episode termination."""
     env.reset()
     done = False
-    while not done:
+
+    limit = env.max_steps + 1  # Maximum number of steps before termination
+    i = 0
+    while not done and i < limit:
         action = np.random.rand(2)
         _, _, terminated, truncated, _ = env.step(action)  # Example neutral action
         done = terminated | truncated
+        i += 1
 
-    assert done is True  # Ensure the environment eventually terminates
+    assert done is True, \
+        f"Environment did not terminate after {env.max_steps} steps"

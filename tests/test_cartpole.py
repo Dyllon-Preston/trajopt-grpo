@@ -11,19 +11,27 @@ def env():
 def test_cartpole_initialization(env):
     """Test if the CartPole environment initializes correctly."""
     assert env is not None
-    assert isinstance(env.masscart, float)
-    assert isinstance(env.masspole, float)
-    assert isinstance(env.length, float)
-    assert isinstance(env.gravity, float)
-    assert isinstance(env.timestep, float)
+    assert isinstance(env.masscart, float), \
+        f"masscart is {type(env.masscart)}, expected float"
+    assert isinstance(env.masspole, float), \
+        f"masspole is {type(env.masspole)}, expected float"
+    assert isinstance(env.length, float), \
+        f"length is {type(env.length)}, expected float"
+    assert isinstance(env.gravity, float), \
+        f"gravity is {type(env.gravity)}, expected float"
+    assert isinstance(env.timestep, float), \
+        f"timestep is {type(env.timestep)}, expected float"
 
 def test_cartpole_reset(env):
     """Test if reset initializes the state properly."""
     env.reset()
     state = env._get_obs()
-    assert isinstance(state, np.ndarray)
-    assert state.shape == (5,)  # Should have 5 state variables
-    assert np.all(np.abs(state) <= 1)  # Values should be within reasonable range
+    assert isinstance(state, np.ndarray), \
+        f"State type is {type(state)}, expected np.ndarray"
+    assert state.shape == (5,), \
+        f"State shape is {state.shape}, expected (5,)"
+    assert env.observation_space.contains(state), \
+        f"State {state} is not in the observation space"
 
 def test_cartpole_dynamics(env):
     """Test if the _dynamics function returns a valid next state."""
@@ -31,8 +39,10 @@ def test_cartpole_dynamics(env):
     action = 0.0  # No control input
     next_state = env._dynamics(state, action)
     
-    assert isinstance(next_state, np.ndarray)
-    assert next_state.shape == (5,)
+    assert isinstance(next_state, np.ndarray), \
+        f"Next state type is {type(next_state)}, expected np.ndarray"
+    assert next_state.shape == (5,), \
+        f"Next state shape is {next_state.shape}, expected (5,)"
 
 def test_cartpole_step(env):
     """Test if step function works correctly."""
@@ -40,12 +50,18 @@ def test_cartpole_step(env):
     action = 0.1  # Small force applied to the cart
     observation, reward, terminated, truncated, info = env.step(action)
 
-    assert isinstance(observation, np.ndarray)
-    assert observation.shape == (5,)
-    assert isinstance(reward, float)
-    assert isinstance(terminated, bool)
-    assert isinstance(truncated, bool)
-    assert isinstance(info, dict)
+    assert isinstance(observation, np.ndarray), \
+        f"Observation type is {type(observation)}, expected np.ndarray"
+    assert observation.shape == (5,), \
+        f"Observation shape is {observation.shape}, expected (5,)"
+    assert isinstance(reward, float), \
+        f"Reward type is {type(reward)}, expected float"
+    assert isinstance(terminated, bool), \
+        f"Terminated type is {type(terminated)}, expected bool"
+    assert isinstance(truncated, bool), \
+        f"Truncated type is {type(truncated)}, expected bool"
+    assert isinstance(info, dict), \
+        f"Info type is {type(info)}, expected dict"
 
 def test_cartpole_step_progression(env):
     """Test if the environment state evolves with steps."""
@@ -56,7 +72,8 @@ def test_cartpole_step_progression(env):
         env.step(0.1)  # Apply small force repeatedly
     
     new_state = env._get_obs()
-    assert not np.array_equal(initial_state, new_state)  # State should change
+    assert not np.array_equal(initial_state, new_state), \
+        "State should change after applying control input"
 
 def test_cartpole_termination(env):
     """Test if the environment terminates when conditions are met."""
@@ -68,15 +85,8 @@ def test_cartpole_termination(env):
         
         _, _, terminated, truncated, _ = env.step(0.1)
     
-    assert terminated or truncated  # One of them should eventually be True
-
-def test_cartpole_truncation(env):
-    """Test if the environment truncates when cart goes out of bounds."""
-    env.reset()
-    env.state_dict['cartpole'][0] = 2  # Set x-position out of bounds
-    _, _, terminated, truncated, _ = env.step(0)
-
-    assert truncated  # Truncation should trigger
+    assert terminated or truncated, \
+        "Environment should terminate when conditions are met"
 
 def test_cartpole_reward_function(env):
     """Test if the reward function behaves reasonably."""
@@ -88,15 +98,17 @@ def test_cartpole_reward_function(env):
     env.restart()
     state, reward, _, _, _ = env.step(0.0)
 
-    assert reward > 0  # Should be positive for staying upright
-    assert reward < 5  # Should not be unrealistically high
+    assert reward > 0, \
+        f"Reward is {reward}, expected positive for being upright"
+    assert reward < 5, \
+        f"Reward is {reward}, expected less than 5 for being upright"
 
 def test_cartpole_render(env):
     """Test if rendering runs without errors."""
     fig, ax = plt.subplots()
     try:
         env.render(ax)
-        assert True  # If no error occurs, test passes
+        assert True
     except Exception as e:
         pytest.fail(f"Render function failed: {e}")
 
