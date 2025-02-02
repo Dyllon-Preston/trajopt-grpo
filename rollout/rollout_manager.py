@@ -10,7 +10,7 @@ def worker_process(worker, task_queue, result_queue, num_episodes_per_worker):
         if not task_queue.empty():
             task = task_queue.get(timeout=1)  # Wait for a task to be assigned
             if task == "ROLLOUT":
-                worker.episodes_completed[worker.worker_id] = 0
+                worker.episodes_completed[worker.worker_id] = 0 # Shouldn't be necessary, but just in case
                 result = worker.run_episodes(num_episodes = num_episodes_per_worker)
                 result_queue.put((worker, result))
             elif task == "SHUTDOWN":
@@ -67,6 +67,7 @@ class RolloutManager:
 
         group_observations = np.zeros((self.num_workers, self.num_episodes_per_worker, self.max_steps, self.obs_dim))
         group_actions = np.zeros((self.num_workers, self.num_episodes_per_worker, self.max_steps, self.act_dim))
+        group_log_probs = np.zeros((self.num_workers, self.num_episodes_per_worker, self.max_steps))
         group_rewards = np.zeros((self.num_workers, self.num_episodes_per_worker, self.max_steps))
         group_lengths = np.zeros((self.num_workers, self.num_episodes_per_worker))
 
@@ -78,14 +79,15 @@ class RolloutManager:
 
         for _ in range(self.num_workers):
             worker, worker_result = self.result_queue.get()
-            observations, actions, rewards, lengths = worker_result
+            observations, actions, log_probs, rewards, lengths = worker_result
 
             group_observations[worker.worker_id] = observations
             group_actions[worker.worker_id] = actions
+            group_log_probs[worker.worker_id] = log_probs
             group_rewards[worker.worker_id] = rewards
             group_lengths[worker.worker_id] = lengths
 
-        return group_observations, group_actions, group_rewards, group_lengths
+        return group_observations, group_actions, group_log_probs, group_rewards, group_lengths
         
     def shutdown(self):
         for _ in range(self.num_workers):

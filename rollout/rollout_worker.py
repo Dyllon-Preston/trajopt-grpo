@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 class RolloutWorker:
     def __init__(self, worker_id: int, env, policy, episodes_completed):
@@ -35,23 +36,26 @@ class RolloutWorker:
 
         batch_observations = np.zeros((num_episodes, max_steps, obs_dim))
         batch_actions = np.zeros((num_episodes, max_steps, act_dim))
+        batch_log_probs = np.zeros((num_episodes, max_steps))
         batch_rewards = np.zeros((num_episodes, max_steps))
         episode_lengths = np.zeros(num_episodes, dtype=int)
 
         for episode in range(num_episodes):
             observations = np.zeros((max_steps, obs_dim))
             actions = np.zeros((max_steps, act_dim))
+            log_probs = np.zeros(max_steps)
             rewards = np.zeros(max_steps)
 
             done = False
             step_idx = 0  # Explicit step counter
 
             while not done and step_idx < max_steps:
-                action = self.policy(observation)
+                action, log_prob = self.policy(observation)
                 observation, reward, terminated, truncated, _ = self.env.step(action)
 
                 observations[step_idx] = observation
                 actions[step_idx] = action
+                log_probs[step_idx] = log_prob
                 rewards[step_idx] = reward
 
                 done = terminated or truncated
@@ -59,6 +63,7 @@ class RolloutWorker:
 
             batch_observations[episode, :step_idx] = observations[:step_idx]
             batch_actions[episode, :step_idx] = actions[:step_idx]
+            batch_log_probs[episode, :step_idx] = log_probs[:step_idx]
             batch_rewards[episode, :step_idx] = rewards[:step_idx]
             episode_lengths[episode] = step_idx  # Store episode length
 
@@ -69,4 +74,4 @@ class RolloutWorker:
 
             self.episodes_completed[self.worker_id] = episode + 1
 
-        return batch_observations, batch_actions, batch_rewards, episode_lengths
+        return batch_observations, batch_actions, batch_log_probs, batch_rewards, episode_lengths

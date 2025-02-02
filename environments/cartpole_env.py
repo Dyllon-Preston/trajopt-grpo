@@ -158,12 +158,18 @@ class CartPole(Env):
 
     def render(
             self, 
-            ax):
+            ax,
+            observation=None,
+            color='black',
+            alpha=1.0):
         """
         Plot the state of the cartpole
         """
 
-        x, xdot, sin_theta, cos_theta, thetadot = self.state_dict['cartpole']
+        if observation is None:
+            observation = self.state_dict['cartpole']
+
+        x, xdot, sin_theta, cos_theta, thetadot = observation
         theta = np.arctan2(sin_theta, cos_theta)
 
         ax.set_xlim([-3, 3])
@@ -171,13 +177,14 @@ class CartPole(Env):
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_frame_on(False)
+        ax.set_aspect('equal')
 
         cart_width = 0.2
-        cart_height = 0.1
+        cart_height = 0.05
 
         # Draw cart
         cart = patches.Rectangle((x - cart_width/2, 0), cart_width, cart_height, 
-                                color='black', ec='white', lw=2)
+                                color=color, ec=color, lw=2, alpha=alpha)
 
         ax.add_patch(cart)
 
@@ -186,7 +193,7 @@ class CartPole(Env):
         pole_y = self.length * np.cos(theta)
         
         # Draw pole
-        ax.plot([x, pole_x], [0, pole_y], color='red', lw=4, solid_capstyle='round')
+        ax.plot([x, pole_x], [0, pole_y], color=color, lw=4, solid_capstyle='round', alpha=alpha)
         
         # Draw pivot point
-        ax.scatter([x], [0], color='black', s=50, zorder=3)
+        ax.scatter([x], [0], color=color, s=50, zorder=3, alpha=alpha)

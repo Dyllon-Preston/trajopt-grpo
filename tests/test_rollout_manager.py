@@ -10,7 +10,7 @@ env = env_fn()
 
 # Define a random policy for testing outside of the test for pickling
 def random_policy(state):
-    return env.action_space.sample()
+    return (env.action_space.sample(), 0)
 
 # Define the worker class outside of the test for pickling
 def worker_class(worker_id, env, policy, episodes_completed):
@@ -29,7 +29,7 @@ def test_rollout_manager():
     )
 
     # Run rollout process
-    group_observations, group_actions, group_rewards, group_lengths = manager.rollout()
+    group_observations, group_actions, group_log_probs, group_rewards, group_lengths = manager.rollout()
 
     # Extract the number of workers, episodes, and max steps
     num_workers = manager.num_workers
@@ -42,6 +42,9 @@ def test_rollout_manager():
 
     assert group_actions.shape == (num_workers, num_episodes, max_steps, env.action_space.shape[0]), \
         f"Unexpected actions shape: {group_actions.shape}"
+    
+    assert group_log_probs.shape == (num_workers, num_episodes, max_steps), \
+        f"Unexpected log_probs shape: {group_log_probs.shape}"
 
     assert group_rewards.shape == (num_workers, num_episodes, max_steps), \
         f"Unexpected rewards shape: {group_rewards.shape}"
