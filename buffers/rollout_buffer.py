@@ -77,19 +77,24 @@ class Rollout_Buffer():
         num_groups = self.group_observations.shape[0]
         
          # Grid dimensions for subplots.
-        n = min(max(num_groups//3, 1), 3) # Number of columns. Can be 1, 2, or 3.
-        m = min(num_groups//n, 2)
+
+        n = min(max(num_groups//3, 1), 2) # Number of rows. Can be 1 or 2.
+        m = min(num_groups//n, 3)
         
         # Determine maximum time steps and number of episodes.
         max_steps = self.group_observations.shape[2]
         episodes = self.group_observations.shape[1]
         
-        # Create the figure and subplots.
-        fig, axs = plt.subplots(n, m, figsize=(8, 5))
-        axs = axs.flatten()
+        if self.fig is None:
+            # Create the figure and subplots.
+            fig, axs = plt.subplots(n, m, figsize=(8, 5))
+            axs = axs.flatten()
 
-        self.fig = fig
-        self.axs = axs
+            self.fig = fig
+            self.axs = axs
+        else:
+            fig = self.fig
+            axs = self.axs
         
         # Define distinct colors for each episode.
         colors = [plt.cm.jet(i / episodes) for i in range(episodes)]
@@ -115,11 +120,12 @@ class Rollout_Buffer():
                         ax=ax,
                         observation=obs,
                         color=colors[episode],
-                        alpha=1 / episodes
+                        alpha=2/episodes
                     )
                 ax.set_title(f"Subplot {i+1}")
             
             fig.suptitle(f"Episode {episode + 1} | Step {step}", fontsize=16)
+            plt.tight_layout()
             fig.canvas.draw()
         
         def update_concurrent(frame):
@@ -132,19 +138,23 @@ class Rollout_Buffer():
             """
             for i, ax in enumerate(axs):
                 # Render observation for each episode that has the frame.
+                ax.cla()  # Clear the axis.
                 for ep in range(episodes):
                     if frame < self.group_lengths[i, ep]:
                         obs = self.group_observations[i, ep, frame]
-                        ax.cla()  # Clear the axis.
-                        self.env.render(
-                            ax=ax,
-                            observation=obs,
-                            color=colors[ep],
-                            alpha=1 / episodes
-                        )
+                    else:
+                        obs = self.group_observations[i, ep, int(self.group_lengths[i, ep]) - 1]
+                    self.env.render(
+                        ax=ax,
+                        observation=obs,
+                        color=colors[ep],
+                        alpha=2/episodes
+                    )
+
                 ax.set_title(f"Subplot {i+1}")
                 
             fig.suptitle(f"Step {frame}", fontsize=16)
+            plt.tight_layout()
             fig.canvas.draw()
         
         # Loop over frames using plt.pause.
@@ -158,7 +168,6 @@ class Rollout_Buffer():
                 update(frame)
                 plt.pause(pause_interval)
         
-        # plt.close()
 
     def close(self):
         """

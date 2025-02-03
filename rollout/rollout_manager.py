@@ -10,9 +10,11 @@ def worker_process(worker, task_queue, result_queue, num_episodes_per_worker):
         if not task_queue.empty():
             task = task_queue.get(timeout=1)  # Wait for a task to be assigned
             if task == "ROLLOUT":
-                worker.episodes_completed[worker.worker_id] = 0 # Shouldn't be necessary, but just in case
-                result = worker.run_episodes(num_episodes = num_episodes_per_worker)
-                result_queue.put((worker, result))
+                if worker.episodes_completed[worker.worker_id] == 0:
+                    result = worker.run_episodes(num_episodes = num_episodes_per_worker)
+                    result_queue.put((worker, result))
+                else:
+                    task_queue.put("ROLLOUT")  # Re-queue the task if worker already completed episodes
             elif task == "SHUTDOWN":
                 break  # Exit process cleanly
 
@@ -53,6 +55,9 @@ class RolloutManager:
             p.start()
             self.processes.append(p)
         
+        for i in range(num_workers):
+            self.episodes_completed[i] = 0
+        
     def print_progress(self):
         """Prints a live-updating progress bar for each worker."""
         sys.stdout.write("\rWorker Progress: ")
@@ -78,6 +83,9 @@ class RolloutManager:
         self.print_progress()
 
         for _ in range(self.num_workers):
+            if self.result_queue.empty():
+                raise ValueError("Result queue is empty. This should not happen.")
+
             worker, worker_result = self.result_queue.get()
             observations, actions, log_probs, rewards, lengths = worker_result
 

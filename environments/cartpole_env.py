@@ -35,7 +35,7 @@ class CartPole(Env):
 
         # Define the observation and action spaces
         self.observation_space = gym.spaces.Box(
-            low=-3, high=3, shape=(5,), dtype=np.float32)
+            low=-1, high=1, shape=(5,), dtype=np.float32)
         self.action_space = gym.spaces.Box(
             low=-1, high=1, shape=(1,), dtype=np.float32)
 
@@ -67,14 +67,20 @@ class CartPole(Env):
         # Translational acceleration
         a = (control + masspole*length*(thetadot**2*sin_theta - alpha*cos_theta))/(masscart + masspole)
 
-        next_state = np.array(
-            [x + xdot*timestep, 
-             xdot + a*timestep, 
-             np.sin(theta + thetadot*timestep), 
-             np.cos(theta + thetadot*timestep), 
-             thetadot + alpha*timestep]
-        )
+        # Semi-implicit Euler integration
+        xdot = xdot + a*timestep
+        x = x + xdot*timestep
 
+        thetadot = thetadot + alpha*timestep
+        theta = theta + thetadot * timestep
+
+        next_state = np.array([
+            x,
+            xdot,
+            np.sin(theta),
+            np.cos(theta),
+            thetadot
+        ])
         return next_state
     
     def _propegate_cartpole(
@@ -146,7 +152,7 @@ class CartPole(Env):
             1/(1 + np.sum(action**2)) # Reward for using less control
         ])
 
-        truncated = (np.abs(x) > 3) or (self._time > self.max_time)
+        truncated = (np.abs(x) > 1) or (self._time > self.max_time)
         terminated = self._time_balanced > 5
 
         if truncated:
@@ -172,18 +178,21 @@ class CartPole(Env):
         x, xdot, sin_theta, cos_theta, thetadot = observation
         theta = np.arctan2(sin_theta, cos_theta)
 
-        ax.set_xlim([-3, 3])
-        ax.set_ylim([-0.5, 1])
+        ax.set_xlim([-1, 1])
+        ax.set_ylim([-1, 1])
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_frame_on(False)
+        # ax.set_frame_on(False)
         ax.set_aspect('equal')
 
-        cart_width = 0.2
-        cart_height = 0.05
+        cart_width = 0.3
+        cart_height = 0.1
+
+        # Draw floor
+        ax.axhline(y=0, color='black', lw=1, linestyle='-.', alpha=1)
 
         # Draw cart
-        cart = patches.Rectangle((x - cart_width/2, 0), cart_width, cart_height, 
+        cart = patches.Rectangle((x - cart_width/2, -cart_height/2), cart_width, cart_height, 
                                 color=color, ec=color, lw=2, alpha=alpha)
 
         ax.add_patch(cart)
