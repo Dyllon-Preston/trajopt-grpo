@@ -12,7 +12,7 @@ num_workers = 4
 
 # Define the environment creation function outside of the test for pickling
 def env_fn():
-    return CartPole(max_steps=100)
+    return CartPole(max_steps=10)
 
 env = env_fn()
 
