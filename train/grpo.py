@@ -8,7 +8,7 @@ https://arxiv.org/abs/2402.03300
 
 class GRPO:
     """
-    Group Regularized Policy Optimization (GRPO) implementation.
+    Group Relative Policy Optimization (GRPO) implementation.
 
     Attributes:
         group_size (int): Number of groups.

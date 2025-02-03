@@ -12,7 +12,7 @@ num_workers = 4
 
 # Define the environment creation function outside of the test for pickling
 def env_fn():
-    return CartPole(max_steps=10)
+    return CartPole(max_steps=100)
 
 env = env_fn()
 
@@ -91,24 +91,24 @@ def test_rtg_computation(rollout_buffer):
 
     assert np.allclose(computed_rtgs, expected_rtgs, atol=1e-5), "RTG computation incorrect."
 
-# def test_visualize_does_not_crash(rollout_buffer, rollout_data):
-#     """Ensure visualize() runs without crashing."""
+def test_visualize_does_not_crash(rollout_buffer, rollout_data):
+    """Ensure visualize() runs without crashing."""
 
-#     group_observations, group_actions, group_log_probs, group_rewards, group_lengths = rollout_data
+    group_observations, group_actions, group_log_probs, group_rewards, group_lengths = rollout_data
 
-#     rollout_buffer.store(group_observations, group_actions, group_log_probs, group_rewards, group_lengths)
+    rollout_buffer.store(group_observations, group_actions, group_log_probs, group_rewards, group_lengths)
 
-#     try:
-#         rollout_buffer.visualize(concurrent=False, pause_interval=0.01)
-#     except Exception as e:
-#         pytest.fail(f"Visualization function crashed with error: {e}")
+    try:
+        rollout_buffer.visualize(concurrent=False, pause_interval=0.01)
+    except Exception as e:
+        pytest.fail(f"Visualization function crashed with error: {e}")
 
-#     try:
-#         rollout_buffer.visualize(concurrent=True, pause_interval=0.01)
-#     except Exception as e:
-#         pytest.fail(f"Visualization function crashed with error: {e}")
+    try:
+        rollout_buffer.visualize(concurrent=True, pause_interval=0.01)
+    except Exception as e:
+        pytest.fail(f"Visualization function crashed with error: {e}")
 
-#     rollout_buffer.close()
+    rollout_buffer.close()
 
 def test_visualize_without_display_concurrent(rollout_buffer, rollout_data, monkeypatch):
         """

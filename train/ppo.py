@@ -20,7 +20,7 @@ class PPO:
         optimizer: torch.optim.Optimizer,
     ):
         """
-        Initialize GRPO with the specified parameters.
+        Initialize PPO with the specified parameters.
         """
         self.group_size = group_size
         self.epsilon = epsilon
