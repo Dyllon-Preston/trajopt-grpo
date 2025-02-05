@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import abc
 from typing import Any, Tuple, Dict
 

@@ -1,64 +1,100 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from typing import Union
+from buffers.buffer import Buffer
 
-class Rollout_Buffer():
+class Rollout_Buffer(Buffer):
     def __init__(
             self,
-            env):
+            rollout_manager,
+            rtg: bool = True
+            ):
         
-        self.env = env
+        self.rollout_manager = rollout_manager
+        self.env = rollout_manager.env_fn()
+        self.rtg = rtg
 
         self.group_observations = None
         self.group_actions = None
-        self.group_rtgs = None
+        self.group_log_probs = None
+        self.group_values = None
         self.group_rewards = None
         self.group_lengths = None
+
+        self.avg_reward = []
 
         self.fig = None
         self.axs = None
 
-        
+
+    def sample(self):
+        group_observations, group_actions, group_rewards, group_rtgs, group_lengths = self.rollout_manager.rollout()
+        self.store(
+            group_observations,
+            group_actions,
+            group_rewards,
+            group_rtgs,
+            group_lengths
+        )
+
+
     def store(
             self,
             group_observations: np.ndarray,
             group_actions: np.ndarray,
-            group_log_probs: np.ndarray,
             group_rewards: np.ndarray,
+            group_rtgs: np.ndarray,
             group_lengths: np.ndarray
             ):
         
-        group_rtgs = self.rtg(group_rewards)
+        self.group_observations = group_observations
+        self.group_actions = group_actions
+        self.group_rewards = group_rewards
+        self.group_rtgs = group_rtgs
+        self.group_lengths = group_lengths
 
-        self.group_observations = torch.tensor(group_observations, dtype=torch.float32)
-        self.group_actions = torch.tensor(group_actions, dtype=torch.float32)
-        self.group_log_probs = torch.tensor(group_log_probs, dtype=torch.float32)
-        self.group_rtgs = torch.tensor(group_rtgs, dtype=torch.float32)
-        self.group_lengths = torch.tensor(group_lengths, dtype=torch.float32)
-
-
-
-    def rtg(self, 
-            group_rewards: np.ndarray, 
-            gamma: float = 0.99):
-
-        max_steps = group_rewards.shape[2]
-
-        group_rtgs = np.zeros_like(group_rewards)
-
-        for i in range(len(group_rewards)): # For each group
-            for j in range(max_steps - 1, -1, -1): # For each step in the group
-                if j == max_steps - 1:
-                    group_rtgs[i,:,j] = group_rewards[i,:,j]
-                else:
-                    group_rtgs[i,:,j] = group_rewards[i,:,j] + gamma * group_rtgs[i,:,j+1]
+        self.avg_reward.append(np.mean(group_rewards))
         
-        return group_rtgs
+    # def calculate_rtg(self, 
+    #         group_rewards: np.ndarray, 
+    #         gamma: float = 0.99):
+
+    #     max_steps = group_rewards.shape[2]
+
+    #     group_rtgs = np.zeros_like(group_rewards)
+
+    #     for i in range(len(group_rewards)): # For each group
+    #         for j in range(max_steps - 1, -1, -1): # For each step in the group
+    #             if j == max_steps - 1:
+    #                 group_rtgs[i,:,j] = group_rewards[i,:,j]
+    #             else:
+    #                 group_rtgs[i,:,j] = group_rewards[i,:,j] + gamma * group_rtgs[i,:,j+1]
+        
+    #     return group_rtgs
             
     def retrieve(self):
-        return self.group_observations, self.group_actions, self.group_log_probs, self.group_rtgs, self.group_lengths
+        return self.group_observations, self.group_actions, self.group_log_probs, self.group_values, self.group_rtgs, self.group_lengths
 
-    def visualize(self, concurrent: bool = False, pause_interval: float = 0.5):
+    def plot_reward(self, ax: plt.Axes = None):
+        """
+        Plot the average reward per episode.
+        
+        Parameters:
+            ax (plt.Axes): Axis to plot the reward.
+        """
+        ax.cla()
+
+        if ax is None:
+            fig, ax = plt.subplots()
+        
+        ax.plot(self.avg_reward)
+        ax.set_title("Average Reward per Episode")
+        ax.set_xlabel("Episode")
+        ax.set_ylabel("Reward")
+        plt.pause(0.001)
+
+    def visualize(self, sim_axes = None, title_ax = None, concurrent: bool = False, pause_interval: float = 0.5):
         """
         Visualize the rollout observations sequentially using plt.pause instead of animation.
         
@@ -72,6 +108,8 @@ class Rollout_Buffer():
                             If False, updates show one episode at a time across the subplots.
             pause_interval (float): Time in seconds to pause between frame updates.
         """
+
+        env = self.env
 
         # Plot up to 6 subplots.
         num_groups = self.group_observations.shape[0]
@@ -88,13 +126,13 @@ class Rollout_Buffer():
         if self.fig is None:
             # Create the figure and subplots.
             fig, axs = plt.subplots(n, m, figsize=(8, 5))
-            axs = axs.flatten()
+            sim_axes = axs.flatten()
 
             self.fig = fig
             self.axs = axs
         else:
             fig = self.fig
-            axs = self.axs
+            sim_axes = self.axs
         
         # Define distinct colors for each episode.
         colors = [plt.cm.jet(i / episodes) for i in range(episodes)]
@@ -107,22 +145,23 @@ class Rollout_Buffer():
             Parameters:
                 frame (int): Global frame index where each episode shows for max_steps frames.
             """
+
             # Calculate episode and step based on the frame index.
             episode = frame // max_steps
             step = frame % max_steps
             
-            for i, ax in enumerate(axs):
+            for i, ax in enumerate(sim_axes):
                 # Render the observation if within valid length.
                 if step < self.group_lengths[i, episode]:
                     obs = self.group_observations[i, episode, step]
                     ax.cla()  # Clear the axis.
-                    self.env.render(
+                    env.render(
                         ax=ax,
                         observation=obs,
                         color=colors[episode],
                         alpha=2/episodes
                     )
-                ax.set_title(f"Subplot {i+1}")
+                title_ax.set_title(f"Subplot {i+1}")
             
             fig.suptitle(f"Episode {episode + 1} | Step {step}", fontsize=16)
             plt.tight_layout()
@@ -136,7 +175,7 @@ class Rollout_Buffer():
             Parameters:
                 frame (int): The current time step index.
             """
-            for i, ax in enumerate(axs):
+            for i, ax in enumerate(sim_axes):
                 # Render observation for each episode that has the frame.
                 ax.cla()  # Clear the axis.
                 for ep in range(episodes):
@@ -144,14 +183,14 @@ class Rollout_Buffer():
                         obs = self.group_observations[i, ep, frame]
                     else:
                         obs = self.group_observations[i, ep, int(self.group_lengths[i, ep]) - 1]
-                    self.env.render(
+                    env.render(
                         ax=ax,
                         observation=obs,
                         color=colors[ep],
                         alpha=2/episodes
                     )
 
-                ax.set_title(f"Subplot {i+1}")
+                title_ax.set_title(f"Subplot {i+1}")
                 
             fig.suptitle(f"Step {frame}", fontsize=16)
             plt.tight_layout()

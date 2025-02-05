@@ -1,5 +1,4 @@
-from .ppo import PPO
-from .grpo import GRPO
+from .trainer import Trainer
 
 # Define what is accessible when importing the package
-__all__ = ["PPO", "GRPO"]
+__all__ = ["Trainer"]

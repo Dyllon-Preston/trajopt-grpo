@@ -1,4 +1,4 @@
-import multiprocessing as mp
+import torch.multiprocessing as mp
 import numpy as np
 import sys
 import time
@@ -70,11 +70,11 @@ class RolloutManager:
         for _ in range(self.num_workers):
             self.task_queue.put("ROLLOUT")
 
-        group_observations = np.zeros((self.num_workers, self.num_episodes_per_worker, self.max_steps, self.obs_dim))
-        group_actions = np.zeros((self.num_workers, self.num_episodes_per_worker, self.max_steps, self.act_dim))
-        group_log_probs = np.zeros((self.num_workers, self.num_episodes_per_worker, self.max_steps))
-        group_rewards = np.zeros((self.num_workers, self.num_episodes_per_worker, self.max_steps))
-        group_lengths = np.zeros((self.num_workers, self.num_episodes_per_worker))
+        group_observations = [None]*self.num_workers
+        group_actions = [None]*self.num_workers
+        group_rewards = [None]*self.num_workers
+        group_rtgs = [None]*self.num_workers
+        group_lengths = [None]*self.num_workers
 
         while any(ep < self.num_episodes_per_worker for ep in self.episodes_completed):
             self.print_progress()
@@ -83,19 +83,16 @@ class RolloutManager:
         self.print_progress()
 
         for _ in range(self.num_workers):
-            if self.result_queue.empty():
-                raise ValueError("Result queue is empty. This should not happen.")
-
             worker, worker_result = self.result_queue.get()
-            observations, actions, log_probs, rewards, lengths = worker_result
-
+            observations, actions, rewards, rtgs, lengths = worker_result
+            
             group_observations[worker.worker_id] = observations
             group_actions[worker.worker_id] = actions
-            group_log_probs[worker.worker_id] = log_probs
             group_rewards[worker.worker_id] = rewards
+            group_rtgs[worker.worker_id] = rtgs
             group_lengths[worker.worker_id] = lengths
 
-        return group_observations, group_actions, group_log_probs, group_rewards, group_lengths
+        return group_observations, group_actions, group_rewards, group_rtgs, group_lengths
         
     def shutdown(self):
         for _ in range(self.num_workers):

@@ -6,6 +6,7 @@ import gymnasium as gym
 class CartPole(Env):
     def __init__(
             self,
+            env_name: str = 'CartPole',
             masscart: float=1.0, # kg
             masspole: float=0.1, # kg
             length: float=0.5, # m
@@ -13,6 +14,9 @@ class CartPole(Env):
             timestep: float=0.05, # s
             max_steps: int=200,
             ):
+        
+        # Initialize the environment
+        super().__init__(env_name)
 
         # CartPole parameters
         self.masscart = masscart

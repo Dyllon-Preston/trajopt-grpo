@@ -1,3 +1,5 @@
+from algorithms.algorithm import Algorithm
+
 import torch
 import copy
 
@@ -6,7 +8,7 @@ DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Mode
 https://arxiv.org/abs/2402.03300
 """
 
-class GRPO:
+class GRPO(Algorithm):
     """
     Group Relative Policy Optimization (GRPO) implementation.
 
@@ -22,18 +24,16 @@ class GRPO:
     """
     def __init__(
         self,
-        group_size: int,
         epsilon: float,
-        policy: torch.nn.Module,
-        ref_model: torch.nn.Module,
         beta: float,
-        updates_per_iter: int,
+        policy: torch.nn.Module,
         optimizer: torch.optim.Optimizer,
+        ref_model: torch.nn.Module = None,
+        updates_per_iter: int = 10,
     ):
         """
         Initialize GRPO with the specified parameters.
         """
-        self.group_size = group_size
         self.epsilon = epsilon
         self.policy = policy
         self.ref_model = ref_model
@@ -44,7 +44,7 @@ class GRPO:
         # Create a deep copy of the policy for stable old_policy
         self.old_policy = copy.deepcopy(self.policy)
 
-    def train(self, group_observations, group_actions, group_log_probs, group_rewards):
+    def learn(self, group_observations, group_actions, group_rewards):
         """
         Perform training using group data.
 
@@ -52,23 +52,32 @@ class GRPO:
             group_observations (list of torch.Tensor): Observations for each group.
             group_actions (list of torch.Tensor): Actions taken for each group.
             group_log_probs (list of torch.Tensor): Log probabilities from the policy.
+            group_values (list of torch.Tensor): Value estimates for each group (Not used in this algorithm).
             group_rewards (list of torch.Tensor): Rewards received for each group.
         """
+
+        group_size = len(group_observations)
+
+        group_old_log_probs = [None]*group_size
+        for i in range(group_size):
+            old_log_probs = self.old_policy.log_prob(group_observations[i], group_actions[i])
+            group_old_log_probs[i] = old_log_probs
+
         # Perform multiple update iterations
         for _ in range(self.updates_per_iter):
             J = 0 # Initialize loss for the current update iteration
-            for i in range(self.group_size):
+            for i in range(group_size):
                 # Compute advantage by normalizing rewards
                 A_i = (group_rewards[i] - torch.mean(group_rewards[i])) / torch.std(group_rewards[i] + 1e-8)
 
-                # Forward pass on old_policy to get old log probabilities
-                _, old_log_probs = self.old_policy(group_observations[i])
+                # Old log probabilities from stored group log probs
+                old_log_probs = group_old_log_probs[i]
                 
                 # Current log probabilities from stored group log probs
-                log_probs = group_log_probs[i]
-
+                log_probs = self.policy.log_prob(group_observations[i], group_actions[i])
+                
                 # Compute probability ratios for policy update
-                ratios = torch.exp(log_probs - old_log_probs)
+                ratios = torch.exp(log_probs - old_log_probs.detach())
 
                 # If reference model is provided, compute the KL divergence penalty
                 if self.ref_model is not None:
@@ -79,16 +88,16 @@ class GRPO:
                     D_kl = 0
                 
                 # Policy loss using a clipped surrogate objective minus a KL-divergence penalty
-                J += min(ratios*A_i, torch.clamp(ratios, 1-self.epsilon, 1+self.epsilon)*A_i) - self.beta*D_kl
+                J += torch.min(ratios*A_i, torch.clamp(ratios, 1-self.epsilon, 1+self.epsilon)*A_i).sum() - self.beta*D_kl
             
             # Normalize loss over groups (note: division by negative group_size to perform gradient ascent)
-            J /= -self.group_size
+            J /= -group_size
 
             # Perform a gradient descent step (note: optimizer minimizes, so negative loss is used)
             self.optimizer.zero_grad()
             J.backward()
             self.optimizer.step()
 
-            # Update policy
-            self.old_policy.load_state_dict(self.policy.state_dict())
+        # Update policy
+        self.old_policy.load_state_dict(self.policy.state_dict())
                 
