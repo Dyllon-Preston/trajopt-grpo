@@ -187,3 +187,193 @@ class GaussianActor_NeuralNetwork(ActorCritic):
         Load the state dictionary into the actor network.
         """
         self.actor.load_state_dict(state_dict)
+
+    def metadata(self):
+        """
+        Returns metadata about the actor network.
+
+        Returns:
+            dict: A dictionary containing metadata about the actor network.
+        """
+        return {
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
+            'hidden_dims': self.hidden_dims,
+            'activation': self.activation,
+            'cov': self.cov.tolist() if isinstance(self.cov, torch.Tensor) else self.cov,
+            'num_parameters': sum(p.numel() for p in self.actor.parameters()),
+        }
+
+    def save(self, save_path):
+        """
+        Save the actor network's state dictionary to a file.
+
+        Parameters:
+            save_path (str): The path to the file where the state dictionary will be saved.
+        """
+        torch.save(self.actor.state_dict(), save_path + 'model.pt')
+
+        metadata = self.metadata()
+        with open(save_path + 'metadata.txt', 'w') as f:
+            for key, value in metadata.items():
+                f.write(f"{key}: {value}\n")
+
+
+
+class GaussianActorCritic_NeuralNetwork(ActorCritic):
+    """
+    A Gaussian actor-critic that utilizes a fully-connected neural network 
+    to compute actions and values. A Gaussian distribution is constructed over the 
+    action space to encourage exploration using the provided covariance matrix.
+    """
+    def __init__(
+            self, 
+            input_dim: int, 
+            output_dim: int, 
+            hidden_dims: Union[list, tuple], 
+            activation: str = 'ReLU',
+            cov: Union[list, float] = 0.1):
+        """
+        Initializes the GaussianActorCritic_NeuralNetwork.
+
+        Parameters:
+            input_dim (int): Number of input features.
+            output_dim (int): Number of output features.
+            hidden_dims (list): Sizes of each hidden layer.
+            activation (str, optional): Activation function (as defined in torch.nn). Defaults to 'ReLU'.
+        """
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_dims = hidden_dims
+        self.activation = activation
+
+        if isinstance(cov, list):
+            self.cov = torch.diag(torch.tensor(cov))
+        else:
+            self.cov = torch.diag(torch.tensor([cov] * output_dim))
+
+        self.actor = NeuralNetwork(input_dim, output_dim, hidden_dims, activation)
+        self.critic = NeuralNetwork(input_dim, 1, hidden_dims, activation)
+
+    def forward(self, state):
+        """
+        Compute the action and its log probability by combining the network output 
+        with a Gaussian distribution. The covariance matrix controls the extent of noise, 
+        thereby facilitating exploration.
+
+        Parameters:
+            state (np.ndarray or torch.Tensor): The current state.
+            cov (torch.Tensor): The covariance matrix dictating the exploration noise.
+
+        Returns:
+            tuple: 
+                - mean_action (torch.Tensor): The network's output, representing the mean action.
+                - log_prob (torch.Tensor): Log probability of the mean action under the Gaussian distribution.
+                - value (torch.Tensor): The value of the state.
+        """
+
+        if isinstance(state, np.ndarray):
+            state = torch.from_numpy(state).float()
+
+        # Compute the mean action through a forward pass of the neural network.
+        mean_action = self.actor(state)
+        
+        # Create a Gaussian distribution with the computed mean and provided covariance matrix.
+        dist = MultivariateNormal(mean_action, self.cov)
+        
+        action = dist.sample()
+
+        # Evaluate the log probability of taking the mean
+        log_prob = dist.log_prob(action)
+
+        # Compute the value of the state
+        value = self.critic(state)
+
+        return action.detach().numpy(), log_prob, value
+    
+    def log_prob(self, observation, action):
+        """
+
+        Compute the log probability of an action given an observation.
+
+        Parameters:
+            observation (torch.Tensor): The observation for which to compute the log probability.
+            action (torch.Tensor): The action for which to compute the log probability.
+        Returns:
+            torch.Tensor: Log probability of the action.
+       
+        """
+
+        if isinstance(observation, np.ndarray):
+            observation = torch.from_numpy(observation).float()
+        if isinstance(action, np.ndarray):
+            action = torch.from_numpy(action).float()
+
+        mean_action = self.actor(observation)
+        dist = MultivariateNormal(mean_action, self.cov)
+        return dist.log_prob(action)
+    
+    def value(self, state):
+        """
+        Compute the value of a given state.
+
+        Parameters:
+            state (torch.Tensor): The state for which to compute the value.
+
+        Returns:
+            torch.Tensor: Value of the state.
+        """
+        return self.critic(state).squeeze()
+    
+    def parameters(self):
+        """
+        Returns the parameters of the actor and critic networks for optimization.
+        """
+        return list(self.actor.parameters()) + list(self.critic.parameters())
+    
+    def state_dict(self):
+        """
+        Returns the state dictionary of the actor and critic networks.
+        """
+        return {
+            'actor': self.actor.state_dict(),
+            'critic': self.critic.state_dict()
+        }
+    
+    def load_state_dict(self, state_dict):
+        """
+        Load the state dictionary into the actor and critic networks.
+        """
+        self.actor.load_state_dict(state_dict['actor'])
+        self.critic.load_state_dict(state_dict['critic'])
+
+    def metadata(self):
+        """
+        Returns metadata about the actor and critic networks.
+
+        Returns:
+            dict: A dictionary containing metadata about the actor and critic networks.
+        """
+        return {
+            'input_dim': self.input_dim,
+            'output_dim': self.output_dim,
+            'hidden_dims': self.hidden_dims,
+            'activation': self.activation,
+            'cov': self.cov.tolist() if isinstance(self.cov, torch.Tensor) else self.cov,
+            'num_parameters': sum(p.numel() for p in self.parameters()),
+        }
+    
+    def save(self, save_path):
+        """
+        Save the actor and critic networks' state dictionaries to a file.
+
+        Parameters:
+            save_path (str): The path to the file where the state dictionaries will be saved.
+        """
+        torch.save(self.state_dict(), save_path + 'model.pt')
+
+        metadata = self.metadata()
+        with open(save_path + 'metadata.txt', 'w') as f:
+            for key, value in metadata.items():
+                f.write(f"{key}: {value}\n")
+                

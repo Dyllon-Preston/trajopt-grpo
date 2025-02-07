@@ -1,6 +1,7 @@
 import os
 import gymnasium as gym
 import torch
+from datetime import date
 
 from buffers import Buffer
 
@@ -21,9 +22,10 @@ class Trainer():
 
             save_freq: int = 10,
             render_freq: int = 10,
-            render_reward: bool = False,
-            render_visuals: bool = False,
+            render: bool = False,
             log_freq: int = 1,
+
+            max_episodes_per_render: int = 5
 
             ):
         
@@ -42,10 +44,21 @@ class Trainer():
         self.env_name = self.env.env_name
 
         self.save_freq = save_freq
+        self.render = render
         self.render_freq = render_freq
         self.log_freq = log_freq
 
-        self.initialize_dashboard()
+        self.max_episodes_per_render = max_episodes_per_render
+
+        self.creation_date = "-"
+
+        if self.render:
+            self.initialize_dashboard()
+        else:
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            self.reward_ax_solo = ax
+
 
         
 
@@ -54,7 +67,14 @@ class Trainer():
             os.makedirs("/archive")
 
     def initialize_dashboard(self):
+
+        
+
+
         fig = plt.figure(figsize=(16, 8))
+
+        self.fig = fig
+
         # Main grid: left for simulations and right for reward plot/table.
         gs_main = gridspec.GridSpec(1, 2, figure=fig, width_ratios=[0.6, 0.4], wspace=0.15)
 
@@ -86,17 +106,19 @@ class Trainer():
         ax_table = fig.add_subplot(gs_right[1])
         ax_table.axis("off")
         table_data = [
-            ["128x128"],            # Model dimensions
-            ["checkpoint_01.pth"],  # Model checkpoint
-            ["2023-10-05"],          # Creation date
-            ["Today"]          # Creation date
+            [str(date.today())], # Publish date
+            [self.env_name],            # Environment name
+            [self.checkpoint_name],  # Checkpoint name
+            [self.policy.metadata()['num_parameters']], # Model parameters
+            [self.creation_date],          # Creation date
         ]
         # Use bbox to let the table fill the axis.
         ax_table.table(cellText=table_data,
                     rowLabels=["Publish Date", 
                                "Environment Name", 
                                "Model Checkpoint", 
-                               "Model Description"],
+                               "Model Parameters",
+                               "Creation Date"],
                     loc="center", bbox=[0.32, 0, 0.65, 1])
 
 
@@ -108,21 +130,35 @@ class Trainer():
             self.algorithm.learn(
                 group_observations = self.buffer.group_observations,
                 group_actions = self.buffer.group_actions,
-                group_rewards = self.buffer.group_rewards,
+                group_rewards = self.buffer.group_rtgs,
+                group_masks = self.buffer.group_masks
             )
 
-            breakpoint()
-
-            if i % self.render_freq == 0:
+            if self.render:
                 self.buffer.plot_reward(self.reward_ax)
-                self.buffer.visualize(sim_axes = self.sim_axes, title_ax = self.ax_sim_title)
+            else:
+                self.buffer.plot_reward(self.reward_ax_solo)
+
+            if (self.render) and (i % self.render_freq == 0):
+                self.buffer.visualize(fig = self.fig, sim_axes = self.sim_axes, title_ax = self.ax_sim_title, max_episodes = self.max_episodes_per_render)
 
             if i % self.save_freq == 0:
-                if not os.path.exists(f"/archive/{self.env_name}/{self.test_name}/{self.checkpoint_name}"):
-                    os.makedirs(f"/archive/{self.env_name}/{self.test_name}/{self.checkpoint_name}")
-                self.policy.save()
+                save_path = f"./archive/{self.env_name}/{self.test_name}/{self.checkpoint_name}/"
+                if not os.path.exists(save_path):
+                    os.makedirs(save_path)
+                self.policy.save(save_path)
 
-                # Save config file
+                config = self.config()
+                with open(f"{save_path}/config.txt", "w") as f:
+                    for key, value in config.items():
+                        f.write(f"{key}: {value}\n")
+
+                # Save reward csv
+                avg_reward = self.buffer.avg_reward
+                with open(f"{save_path}/reward.csv", "w") as f:
+                    for reward in avg_reward:
+                        f.write(f"{reward}\n")
+
 
     def shutdown(self):
         # self.env.close()
@@ -134,8 +170,8 @@ class Trainer():
             "env_name": self.env_name,
             "test_name": self.test_name,
             "checkpoint_name": self.checkpoint_name,
-            "num_workers": self.num_workers,
-            "num_episodes_per_worker": self.num_episodes_per_worker,
+            "num_workers": self.buffer.rollout_manager.num_workers,
+            "num_episodes_per_worker": self.buffer.rollout_manager.num_episodes_per_worker,
             "epochs": self.epochs,
             "save_freq": self.save_freq,
             "render_freq": self.render_freq,

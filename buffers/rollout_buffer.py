@@ -29,15 +29,15 @@ class Rollout_Buffer(Buffer):
 
 
     def sample(self):
-        group_observations, group_actions, group_rewards, group_rtgs, group_lengths = self.rollout_manager.rollout()
+        group_observations, group_actions, group_rewards, group_rtgs, group_lengths, group_masks = self.rollout_manager.rollout()
         self.store(
             group_observations,
             group_actions,
             group_rewards,
             group_rtgs,
-            group_lengths
+            group_lengths,
+            group_masks
         )
-
 
     def store(
             self,
@@ -45,7 +45,8 @@ class Rollout_Buffer(Buffer):
             group_actions: np.ndarray,
             group_rewards: np.ndarray,
             group_rtgs: np.ndarray,
-            group_lengths: np.ndarray
+            group_lengths: np.ndarray,
+            group_masks: np.ndarray
             ):
         
         self.group_observations = group_observations
@@ -53,8 +54,9 @@ class Rollout_Buffer(Buffer):
         self.group_rewards = group_rewards
         self.group_rtgs = group_rtgs
         self.group_lengths = group_lengths
+        self.group_masks = group_masks
 
-        self.avg_reward.append(np.mean(group_rewards))
+        self.avg_reward.append(group_rewards.sum(2).mean().detach().numpy())
         
     # def calculate_rtg(self, 
     #         group_rewards: np.ndarray, 
@@ -89,12 +91,20 @@ class Rollout_Buffer(Buffer):
             fig, ax = plt.subplots()
         
         ax.plot(self.avg_reward)
-        ax.set_title("Average Reward per Episode")
-        ax.set_xlabel("Episode")
+        ax.set_title("Average Total Reward per Episode")
+        ax.set_xlabel("Epoch")
         ax.set_ylabel("Reward")
-        plt.pause(0.001)
+        ax.grid(True)
+        plt.pause(0.1)
 
-    def visualize(self, sim_axes = None, title_ax = None, concurrent: bool = False, pause_interval: float = 0.5):
+    def visualize(
+            self, 
+            fig = None, 
+            sim_axes = None, 
+            title_ax = None, 
+            concurrent: bool = True, 
+            pause_interval: float = -1,
+            max_episodes = 5):
         """
         Visualize the rollout observations sequentially using plt.pause instead of animation.
         
@@ -111,6 +121,9 @@ class Rollout_Buffer(Buffer):
 
         env = self.env
 
+        if pause_interval == -1:
+            pause_interval = env.timestep
+
         # Plot up to 6 subplots.
         num_groups = self.group_observations.shape[0]
         
@@ -122,20 +135,9 @@ class Rollout_Buffer(Buffer):
         # Determine maximum time steps and number of episodes.
         max_steps = self.group_observations.shape[2]
         episodes = self.group_observations.shape[1]
-        
-        if self.fig is None:
-            # Create the figure and subplots.
-            fig, axs = plt.subplots(n, m, figsize=(8, 5))
-            sim_axes = axs.flatten()
 
-            self.fig = fig
-            self.axs = axs
-        else:
-            fig = self.fig
-            sim_axes = self.axs
-        
         # Define distinct colors for each episode.
-        colors = [plt.cm.jet(i / episodes) for i in range(episodes)]
+        colors = [plt.cm.jet(i / max_episodes) for i in range(max_episodes)]
         
         def update(frame):
             """
@@ -159,14 +161,14 @@ class Rollout_Buffer(Buffer):
                         ax=ax,
                         observation=obs,
                         color=colors[episode],
-                        alpha=2/episodes
+                        alpha=min(1.0, 2/max_episodes)
                     )
                 title_ax.set_title(f"Subplot {i+1}")
             
-            fig.suptitle(f"Episode {episode + 1} | Step {step}", fontsize=16)
+            title_ax.set_title(f"Episode {episode + 1} | Step {step}", fontsize=16)
             plt.tight_layout()
             fig.canvas.draw()
-        
+
         def update_concurrent(frame):
             """
             Update function for concurrent mode.
@@ -178,7 +180,7 @@ class Rollout_Buffer(Buffer):
             for i, ax in enumerate(sim_axes):
                 # Render observation for each episode that has the frame.
                 ax.cla()  # Clear the axis.
-                for ep in range(episodes):
+                for ep in range(max_episodes):
                     if frame < self.group_lengths[i, ep]:
                         obs = self.group_observations[i, ep, frame]
                     else:
@@ -187,18 +189,16 @@ class Rollout_Buffer(Buffer):
                         ax=ax,
                         observation=obs,
                         color=colors[ep],
-                        alpha=2/episodes
+                        alpha=min(1.0, 2/max_episodes)
                     )
-
-                title_ax.set_title(f"Subplot {i+1}")
                 
-            fig.suptitle(f"Step {frame}", fontsize=16)
+            title_ax.set_title(f"Step {frame}", fontsize=16)
             plt.tight_layout()
-            fig.canvas.draw()
         
         # Loop over frames using plt.pause.
         if concurrent:
-            for frame in range(max_steps):
+            stop = int(self.group_lengths[:,:max_episodes].max())
+            for frame in range(stop):
                 update_concurrent(frame)
                 plt.pause(pause_interval)
         else:

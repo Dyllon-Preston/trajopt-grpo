@@ -34,11 +34,12 @@ class RolloutWorker:
         obs_dim = self.env.observation_space.shape[0]
         act_dim = self.env.action_space.shape[0]
 
-        batch_observations = np.zeros((num_episodes, max_steps, obs_dim))
-        batch_actions = np.zeros((num_episodes, max_steps, act_dim))
-        batch_rewards = np.zeros((num_episodes, max_steps))
-        batch_rtgs = np.zeros((num_episodes, max_steps))
-        batch_lengths = np.zeros(num_episodes, dtype=int)
+        episodic_observations = np.zeros((num_episodes, max_steps, obs_dim))
+        episodic_actions = np.zeros((num_episodes, max_steps, act_dim))
+        episodic_rewards = np.zeros((num_episodes, max_steps))
+        episodic_rtgs = np.zeros((num_episodes, max_steps))
+        episodic_lengths = np.zeros(num_episodes, dtype=int)
+        episodic_masks = np.zeros((num_episodes, max_steps))
 
         for episode in range(num_episodes):
             observations = np.zeros((max_steps, obs_dim))
@@ -59,11 +60,12 @@ class RolloutWorker:
                 done = terminated or truncated
                 step_idx += 1  # Increment step counter
 
-            batch_observations[episode, :step_idx] = observations[:step_idx]
-            batch_actions[episode, :step_idx] = actions[:step_idx]
-            batch_rewards[episode, :step_idx] = rewards[:step_idx]
-            batch_rtgs[episode, :step_idx] = self.calculate_rtg(rewards[:step_idx])
-            batch_lengths[episode] = step_idx  # Store episode length
+            episodic_observations[episode, :step_idx] = observations[:step_idx]
+            episodic_actions[episode, :step_idx] = actions[:step_idx]
+            episodic_rewards[episode, :step_idx] = rewards[:step_idx]
+            episodic_rtgs[episode, :step_idx] = self.calculate_rtg(rewards[:step_idx])
+            episodic_lengths[episode] = step_idx  # Store episode length
+            episodic_masks[episode, :step_idx] = 1  # Mark valid steps
 
             if restart:
                 observation, info = self.env.restart()  # Return to initial state for the next episode
@@ -72,19 +74,17 @@ class RolloutWorker:
 
             self.episodes_completed[self.worker_id] = episode + 1
 
-        # Compress the data from multiple episodes into a single batch and convert to torch tensors
-        batch_observations = self.compress_episodes(batch_observations, batch_lengths)
-        batch_actions = self.compress_episodes(batch_actions, batch_lengths)
-        batch_rewards = self.compress_episodes(batch_rewards, batch_lengths)
-        batch_rtgs = self.compress_episodes(batch_rtgs, batch_lengths)
+
 
         # Convert to torch tensors
-        batch_observations = torch.from_numpy(batch_observations).float()
-        batch_actions = torch.from_numpy(batch_actions).float()
-        batch_rewards = torch.from_numpy(batch_rewards).float()
-        batch_rtgs = torch.from_numpy(batch_rtgs).float()
+        episodic_observations = torch.from_numpy(episodic_observations).float()
+        episodic_actions = torch.from_numpy(episodic_actions).float()
+        episodic_rewards = torch.from_numpy(episodic_rewards).float()
+        episodic_rtgs = torch.from_numpy(episodic_rtgs).float()
+        episodic_lengths = torch.from_numpy(episodic_lengths).float()
+        episodic_masks = torch.from_numpy(episodic_masks).float()
         
-        return batch_observations, batch_actions, batch_rewards, batch_rtgs, batch_lengths
+        return episodic_observations, episodic_actions, episodic_rewards, episodic_rtgs, episodic_lengths, episodic_masks
     
     def calculate_rtg(self, rewards, gamma = 0.99):
         """
@@ -106,34 +106,4 @@ class RolloutWorker:
             else:
                 rtg[i] = rewards[i] + gamma * rtg[i + 1]
         return rtg
-        
-    
-    def compress_episodes(self, batch_data, batch_lengths):
-        """
-        Compresses the data from multiple episodes into a single batch.
-
-        Args:
-            batch (np.ndarray): Array of data from multiple episodes.
-            batch_lengths (np.ndarray): Array of lengths for each episode.
-
-        Returns:
-            tuple: Compressed batch data.
-        """
-
-        total_length = np.sum(batch_lengths)
-
-        # Determine the shape of a single episode (ignoring the first dimension amd replacing the second)
-        _, _, *episode_shape = batch_data.shape
-        if isinstance(batch_data, np.ndarray):
-            compressed_data = np.zeros((total_length, *episode_shape), dtype=batch_data.dtype)
-        else:
-            compressed_data = torch.zeros((total_length, *episode_shape), dtype=batch_data.dtype)
-            
-        start_idx = 0
-        for i, episode in enumerate(batch_data):
-            end_ix = start_idx + batch_lengths[i]
-            compressed_data[start_idx:end_ix] = episode[:batch_lengths[i]]
-            start_idx = end_ix
-            
-        return compressed_data
         

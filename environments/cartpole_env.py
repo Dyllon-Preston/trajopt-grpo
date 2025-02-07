@@ -44,7 +44,7 @@ class CartPole(Env):
             low=-1, high=1, shape=(1,), dtype=np.float32)
 
     def _wrap_action(self, action):
-        return np.clip(action, -1, 1)
+        return 5*np.clip(action, -1, 1)
 
     def _dynamics(
             self,
@@ -109,6 +109,7 @@ class CartPole(Env):
 
         self._steps = 0
         self._time = 0
+        self._time_balanced = 0
 
         return self._get_obs(), self._get_info()
 
@@ -117,6 +118,7 @@ class CartPole(Env):
 
         self._steps = 0
         self._time = 0
+        self._time_balanced = 0
 
         return self._get_obs(), self._get_info()
 
@@ -152,9 +154,10 @@ class CartPole(Env):
         reward += self.timestep*np.sum([
             1, # Reward for staying alive
             1/(1 + x**2), # Reward for staying near the center
-            1/(1 + theta**2), # Reward for keeping the pole upright
-            1/(1 + np.sum(action**2)) # Reward for using less control
+            cos_theta, # Reward for keeping the pole upright
+            -thetadot,
         ])
+
 
         truncated = (np.abs(x) > 1) or (self._time > self.max_time)
         terminated = self._time_balanced > 5
