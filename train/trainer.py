@@ -23,6 +23,7 @@ class Trainer():
             save_freq: int = 10,
             render_freq: int = 10,
             render: bool = False,
+            plot: bool = True,
             log_freq: int = 1,
 
             max_episodes_per_render: int = 5
@@ -45,10 +46,13 @@ class Trainer():
 
         self.save_freq = save_freq
         self.render = render
+        self.plot = plot
         self.render_freq = render_freq
         self.log_freq = log_freq
 
         self.max_episodes_per_render = max_episodes_per_render
+
+        self.start = 0
 
         self.creation_date = "-"
 
@@ -65,6 +69,9 @@ class Trainer():
 
         if not os.path.exists("/archive"):
             os.makedirs("/archive")
+
+    def set_epoch(self, epoch: int):
+        self.start = epoch
 
     def initialize_dashboard(self):
 
@@ -124,19 +131,21 @@ class Trainer():
 
     def run(self):
 
-        for i in range(self.epochs):
+        start = self.start
+
+        for i in range(start, self.epochs):
             self.buffer.sample()
 
             self.algorithm.learn(
                 group_observations = self.buffer.group_observations,
                 group_actions = self.buffer.group_actions,
-                group_rewards = self.buffer.group_rtgs,
+                group_rewards = self.buffer.group_rewards,
                 group_masks = self.buffer.group_masks
             )
 
             if self.render:
                 self.buffer.plot_reward(self.reward_ax)
-            else:
+            elif self.plot:
                 self.buffer.plot_reward(self.reward_ax_solo)
 
             if (self.render) and (i % self.render_freq == 0):
@@ -158,6 +167,9 @@ class Trainer():
                 with open(f"{save_path}/reward.csv", "w") as f:
                     for reward in avg_reward:
                         f.write(f"{reward}\n")
+
+                # Save optimizer state
+                torch.save(self.algorithm.optimizer.state_dict(), f"{save_path}/optimizer.pt")
 
 
     def shutdown(self):

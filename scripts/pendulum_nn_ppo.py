@@ -2,23 +2,23 @@
 Cartpole with GRPO and Neural Network Policy
 """
 import torch
-from environments import CartPole
+from environments import Pendulum
 from buffers import Rollout_Buffer
 from policies import GaussianActorCritic_NeuralNetwork
-from algorithms import PPO
-from train import Trainer
+from algorithms import PPO, PPO_Simple
+from train import Trainer, load_checkpoint
 
 from rollout import RolloutWorker
 from rollout import RolloutManager
 
 def env_fn():
-    return CartPole()
+    return Pendulum(swingup=True)
 
 policy = GaussianActorCritic_NeuralNetwork(
-    input_dim=5,
+    input_dim=3,
     output_dim=1,
-    hidden_dims=(256, 256, 256),
-    cov=0.3
+    hidden_dims=(512, 512, 512),
+    cov=0.2
 )
 
 worker_class = RolloutWorker
@@ -27,8 +27,10 @@ rollout_manager = RolloutManager(
     env_fn=env_fn,
     worker_class=worker_class,
     policy=policy,
-    num_workers=5,
-    num_episodes_per_worker=5,
+    num_workers=10,
+    num_episodes_per_worker=10,
+    use_multiprocessing=True,
+    restart = False,
 )
 
 buffer = Rollout_Buffer(
@@ -39,11 +41,11 @@ buffer = Rollout_Buffer(
 
 ref_model = None
 
-optimizer = torch.optim.Adam(policy.parameters(), lr=2e-4)
+optimizer = torch.optim.Adam(policy.parameters(), lr=5e-4)
 
 algo = PPO(
     epsilon=0.2,
-    c1 = 0.1,
+    c1 = 0.01,
     policy=policy,
     optimizer = optimizer,
     ref_model = ref_model,
@@ -55,7 +57,7 @@ algo = PPO(
 )
 
 trainer = Trainer(
-    test_name = "cartpole_nn_ppo",
+    test_name = "pendulum_swingup_nn_ppo",
     checkpoint_name = "001",
     buffer = buffer,
     policy = policy,
@@ -64,8 +66,19 @@ trainer = Trainer(
     epochs = 1000,
     render = False,
     render_freq = 20,
-    max_episodes_per_render = 1
+    max_episodes_per_render = 5
 )
+
+
+# load_checkpoint(
+#     policy = policy,
+#     buffer = buffer,
+#     optimizer = optimizer,
+#     trainer = trainer,
+#     path = 'archive/Pendulum/pendulum_swingup_nn_ppo/001'
+
+# )
+
 
 trainer.run()
 

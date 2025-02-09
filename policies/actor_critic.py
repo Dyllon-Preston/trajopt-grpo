@@ -311,7 +311,7 @@ class GaussianActorCritic_NeuralNetwork(ActorCritic):
 
         mean_action = self.actor(observation)
         dist = MultivariateNormal(mean_action, self.cov)
-        return dist.log_prob(action)
+        return dist.log_prob(action), dist.entropy()
     
     def value(self, state):
         """
@@ -370,7 +370,7 @@ class GaussianActorCritic_NeuralNetwork(ActorCritic):
         Parameters:
             save_path (str): The path to the file where the state dictionaries will be saved.
         """
-        torch.save(self.state_dict(), save_path + 'model.pt')
+        torch.save(self.state_dict(), save_path + 'policy.pt')
 
         metadata = self.metadata()
         with open(save_path + 'metadata.txt', 'w') as f:

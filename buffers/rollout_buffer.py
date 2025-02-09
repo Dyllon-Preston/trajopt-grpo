@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 from typing import Union
 from buffers.buffer import Buffer
 
@@ -17,8 +18,6 @@ class Rollout_Buffer(Buffer):
 
         self.group_observations = None
         self.group_actions = None
-        self.group_log_probs = None
-        self.group_values = None
         self.group_rewards = None
         self.group_lengths = None
 
@@ -27,14 +26,26 @@ class Rollout_Buffer(Buffer):
         self.fig = None
         self.axs = None
 
+    def load_reward(self, path: str):
+        """
+        Load the average reward per episode from a CSV file.
+        
+        Parameters:
+            path (str): Path to the CSV file.
+        
+        Returns:
+            int: Number of epochs loaded.
+        """
+        self.avg_reward = np.loadtxt(path, delimiter=",").tolist()
+        return len(self.avg_reward)
+
 
     def sample(self):
-        group_observations, group_actions, group_rewards, group_rtgs, group_lengths, group_masks = self.rollout_manager.rollout()
+        group_observations, group_actions, group_rewards, group_lengths, group_masks = self.rollout_manager.rollout()
         self.store(
             group_observations,
             group_actions,
             group_rewards,
-            group_rtgs,
             group_lengths,
             group_masks
         )
@@ -44,7 +55,6 @@ class Rollout_Buffer(Buffer):
             group_observations: np.ndarray,
             group_actions: np.ndarray,
             group_rewards: np.ndarray,
-            group_rtgs: np.ndarray,
             group_lengths: np.ndarray,
             group_masks: np.ndarray
             ):
@@ -52,31 +62,14 @@ class Rollout_Buffer(Buffer):
         self.group_observations = group_observations
         self.group_actions = group_actions
         self.group_rewards = group_rewards
-        self.group_rtgs = group_rtgs
         self.group_lengths = group_lengths
         self.group_masks = group_masks
 
         self.avg_reward.append(group_rewards.sum(2).mean().detach().numpy())
-        
-    # def calculate_rtg(self, 
-    #         group_rewards: np.ndarray, 
-    #         gamma: float = 0.99):
 
-    #     max_steps = group_rewards.shape[2]
-
-    #     group_rtgs = np.zeros_like(group_rewards)
-
-    #     for i in range(len(group_rewards)): # For each group
-    #         for j in range(max_steps - 1, -1, -1): # For each step in the group
-    #             if j == max_steps - 1:
-    #                 group_rtgs[i,:,j] = group_rewards[i,:,j]
-    #             else:
-    #                 group_rtgs[i,:,j] = group_rewards[i,:,j] + gamma * group_rtgs[i,:,j+1]
-        
-    #     return group_rtgs
             
     def retrieve(self):
-        return self.group_observations, self.group_actions, self.group_log_probs, self.group_values, self.group_rtgs, self.group_lengths
+        return self.group_observations, self.group_actions, self.group_log_probs, self.group_values, self.group_lengths
 
     def plot_reward(self, ax: plt.Axes = None):
         """
@@ -89,12 +82,15 @@ class Rollout_Buffer(Buffer):
 
         if ax is None:
             fig, ax = plt.subplots()
-        
+
         ax.plot(self.avg_reward)
         ax.set_title("Average Total Reward per Episode")
         ax.set_xlabel("Epoch")
         ax.set_ylabel("Reward")
         ax.grid(True)
+
+        ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+        
         plt.pause(0.1)
 
     def visualize(
