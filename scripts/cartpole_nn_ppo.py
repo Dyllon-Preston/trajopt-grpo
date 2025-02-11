@@ -17,8 +17,8 @@ def env_fn():
 policy = GaussianActorCritic_NeuralNetwork(
     input_dim=5,
     output_dim=1,
-    hidden_dims=(256, 256, 256),
-    cov=0.3
+    hidden_dims=(512, 512, 512),
+    cov=0.2
 )
 
 worker_class = RolloutWorker
@@ -27,8 +27,8 @@ rollout_manager = RolloutManager(
     env_fn=env_fn,
     worker_class=worker_class,
     policy=policy,
-    num_workers=5,
-    num_episodes_per_worker=5,
+    num_workers=10,
+    num_episodes_per_worker=10,
 )
 
 buffer = Rollout_Buffer(
@@ -39,7 +39,7 @@ buffer = Rollout_Buffer(
 
 ref_model = None
 
-optimizer = torch.optim.Adam(policy.parameters(), lr=2e-4)
+optimizer = torch.optim.Adam(policy.parameters(), lr=5e-4)
 
 algo = PPO(
     epsilon=0.2,
@@ -62,9 +62,9 @@ trainer = Trainer(
     ref_model = ref_model,
     algorithm = algo,
     epochs = 1000,
-    render = False,
+    render = True,
     render_freq = 20,
-    max_episodes_per_render = 1
+    max_episodes_per_render = 5
 )
 
 trainer.run()
