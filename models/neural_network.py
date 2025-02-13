@@ -11,7 +11,7 @@ class NeuralNetwork(torch.nn.Module):
         input_dim: int, 
         output_dim: int, 
         hidden_dims: list, 
-        activation: Union[str, list] = 'Tanh', # Common valid activation functions ['ReLu', 'Sigmoid', 'Tanh']
+        activation: Union[str, list] = 'ReLu', # Common valid activation functions ['ReLu', 'Sigmoid', 'Tanh']
         ):
         """
         Initializes the NeuralNetwork module.

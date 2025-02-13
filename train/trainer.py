@@ -115,7 +115,7 @@ class Trainer():
         table_data = [
             [str(date.today())], # Publish date
             [self.env_name],            # Environment name
-            [self.checkpoint_name],  # Checkpoint name
+            [f'{self.test_name} | {self.checkpoint_name}'],  # Checkpoint name
             [self.policy.metadata()['num_parameters']], # Model parameters
             [self.creation_date],          # Creation date
         ]

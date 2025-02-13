@@ -40,7 +40,7 @@ This project implements reinforcement learning (RL) algorithms with a focus on P
 
 ### Policies
 - **GaussianActor_NeuralNetwork:** A Gaussian policy network for continuous action spaces.
-- **GaussianActorCritic_NeuralNetwork:** Combined actor-critic architecture for improved performance.
+- **GaussianActorCritic_NeuralNetwork:** Combined actor-critic architecture.
 
 ### Buffers
 - **Base Buffer Class:** An abstract class for experience storage.

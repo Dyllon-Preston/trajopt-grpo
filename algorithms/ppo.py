@@ -18,11 +18,13 @@ class PPO(Algorithm):
         optimizer: torch.optim.Optimizer,
         ref_model: torch.nn.Module,
         updates_per_iter: int,
-        c1: float = 0.01,
+        c1: float = 0.5,
+        kl_coeff: float = 0.5,
         gamma: float = 0.99,
         lam: float = 0.95,
         entropy: float = 0.01,
         batch_size: int = 64,
+        monte_carlo: bool = True
     ):
         """
         Initialize PPO with the specified parameters.
@@ -30,6 +32,7 @@ class PPO(Algorithm):
         Args:
             epsilon (float): Clipping parameter for PPO.
             c1 (float): Weight for the critic (value) loss.
+            kl_coeff (float): Coefficient for the KL divergence penalty.
             policy (torch.nn.Module): The policy network.
             optimizer (torch.optim.Optimizer): Optimizer for policy parameters.
             ref_model (torch.nn.Module): A reference model (unused here, but can be used for e.g. KL control).
@@ -41,6 +44,7 @@ class PPO(Algorithm):
         """
         self.epsilon = epsilon
         self.c1 = c1
+
         self.policy = policy
         self.ref_model = ref_model
         self.updates_per_iter = updates_per_iter
@@ -50,6 +54,8 @@ class PPO(Algorithm):
         self.lam = lam
         self.entropy = entropy
         self.batch_size = batch_size
+        self.kl_coeff = kl_coeff
+        self.monte_carlo = monte_carlo
 
         # Create a deep copy of the policy for stable old_policy
         self.old_policy = copy.deepcopy(self.policy)
@@ -74,6 +80,7 @@ class PPO(Algorithm):
         c1 = self.c1
         gamma = self.gamma
         lam = self.lam
+        kl_coeff = self.kl_coeff
 
         num_groups, num_episodes, max_steps, obs_dim = group_observations.shape
 
@@ -98,28 +105,35 @@ class PPO(Algorithm):
         group_values = values.view(num_groups, num_episodes, max_steps)
 
         group_advantages = torch.zeros_like(group_rewards)
+        group_rtgs = torch.zeros_like(group_rewards)
 
-        for i in reversed(range(max_steps)):
-            if i < max_steps - 1:
-                next_value = group_values[:,:,i+1]*group_masks_float[:,:,i+1]
-                delta = group_rewards[:,:,i] + gamma*next_value - group_values[:,:,i]
-                group_advantages[:,:,i] = delta + gamma*lam*group_advantages[:,:,i+1]*group_masks_float[:,:,i+1]
-            else:
-                next_value = 0
-                delta = group_rewards[:,:,i] + gamma*next_value - group_values[:,:,i]
-                group_advantages[:,:,i] = delta
+        
 
-        group_rtgs = group_values + group_advantages
 
-        # group_rtgs = torch.zeros_like(group_rewards)
-        # for i in reversed(range(max_steps)):
-        #     if i < max_steps - 1:
-        #         next_rtg = group_rtgs[:,:,i+1]*group_masks_float[:,:,i+1]
-        #         rtg = group_rewards[:,:,i] + gamma*next_rtg
-        #         group_rtgs[:,:,i] = rtg
-        #     else:
-        #         rtg = group_rewards[:,:,i]
-        #         group_rtgs[:,:,i] = rtg
+        if self.monte_carlo:
+
+            for i in reversed(range(max_steps)):
+                if i < max_steps - 1:
+                    group_rtgs[:,:,i] = group_rewards[:,:,i]*group_masks_float[:,:,i] + gamma*group_rtgs[:,:,i+1]*group_masks_float[:,:,i+1]
+                else:
+                    group_rtgs[:,:,i] = group_rewards[:,:,i]*group_masks_float[:,:,i]
+
+            group_advantages = group_rtgs - group_values
+        
+        else:
+
+
+            for i in reversed(range(max_steps)):
+                if i < max_steps - 1:
+                    next_value = group_values[:,:,i+1]*group_masks_float[:,:,i+1]
+                    delta = group_rewards[:,:,i] + gamma*next_value - group_values[:,:,i]
+                    group_advantages[:,:,i] = delta + gamma*lam*group_advantages[:,:,i+1]*group_masks_float[:,:,i+1]
+                else:
+                    next_value = 0
+                    delta = group_rewards[:,:,i] + gamma*next_value - group_values[:,:,i]
+                    group_advantages[:,:,i] = delta
+                
+                group_rtgs = group_values + group_advantages
 
 
         rtgs = group_rtgs.view(-1).detach() 
@@ -130,11 +144,6 @@ class PPO(Algorithm):
         actions = actions[mask.bool()]
         rtgs = rtgs[mask.bool()]
         advantages = advantages[mask.bool()]
-
-
-        # V = self.policy.value(observations)
-
-        # advantages = rtgs - V.detach()
 
         # Normalization of advantages and rtgs
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
@@ -157,19 +166,7 @@ class PPO(Algorithm):
                 batch_advantages = advantages[batch_indices]
                 batch_old_log_probs = old_log_probs[batch_indices]
 
-                if old_log_probs.abs().max() > 100:
-                    breakpoint()
-
-                
-                try:
-                    batch_log_probs, entropy = self.policy.log_prob(batch_observations, batch_actions)
-                except:
-                    breakpoint()
-
-                # if batch_log_probs.abs().max() > 100:
-                #     breakpoint()
-
-
+                batch_log_probs, entropy = self.policy.log_prob(batch_observations, batch_actions)
                 ratio = torch.exp(batch_log_probs - batch_old_log_probs)
 
                 # PPO surrogate loss
@@ -185,27 +182,35 @@ class PPO(Algorithm):
                 entropy =  entropy.mean()
                 entropy_loss = -self.entropy*entropy
 
+                # KL divergence penalty
+                kl_div = (torch.exp(batch_old_log_probs)*(batch_old_log_probs - batch_log_probs)).mean()
+                kl_loss = kl_coeff*kl_div
+
+                # if kl_div > 0.01*self.epsilon:
+                #     print("Early stopping due to reaching max KL divergence")
+                #     break
+
                 print("Actor Loss: ", actor_loss, "Critic Loss: ", critic_loss, "Entropy Loss: ", entropy_loss)
 
                 # Total loss
-                total_loss = actor_loss + c1*critic_loss + entropy_loss
+                total_loss = actor_loss + c1*critic_loss + entropy_loss + kl_loss  
 
                 # Optimize
                 self.optimizer.zero_grad()
                 total_loss.backward()  
                 self.optimizer.step()
 
-                # Insert after total_loss.backward() and before self.optimizer.step()
-                total_norm = 0.0
-                for p in self.policy.parameters():
-                    if p.grad is not None:
-                        param_norm = p.grad.data.norm(2)
-                        total_norm += param_norm.item() ** 2
-                total_norm = total_norm ** 0.5
-                print("Gradient norm:", total_norm)
 
-                # if total_norm > 100:
-                #     breakpoint()
+                # total_norm = 0.0
+                # for p in self.policy.parameters():
+                #     if p.grad is not None:
+                #         param_norm = p.grad.data.norm(2)
+                #         total_norm += param_norm.item() ** 2
+                # total_norm = total_norm ** 0.5
+                # print("Gradient norm:", total_norm)
+
+        # Update old policy
+        self.old_policy.load_state_dict(self.policy.state_dict())
 
 
                         

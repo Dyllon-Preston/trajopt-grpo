@@ -8,7 +8,7 @@ class CartPole(Env):
             self,
             env_name: str = 'CartPole',
             masscart: float=1.0, # kg
-            masspole: float=0.1, # kg
+            masspole: float=1.0, # kg
             length: float=0.5, # m
             gravity: float=9.80665, # m/s²
             timestep: float=0.05, # s
@@ -52,6 +52,8 @@ class CartPole(Env):
             control):
         
         x, xdot, sin_theta, cos_theta, thetadot = state
+
+        thetadot = np.clip(thetadot, -10, 10)
 
         control = control[0]
 
@@ -152,20 +154,21 @@ class CartPole(Env):
         info = self._get_info()
 
         reward += self.timestep*np.sum([
-            1, # Reward for staying alive
-            1/(1 + x**2), # Reward for staying near the center
-            cos_theta, # Reward for keeping the pole upright
-            -thetadot,
+            -x**2, # Reward for staying near the center
+            3*cos_theta, # Penalty for not keeping the pole upright
+            -0.1*thetadot**2, # Penalty for moving the pole too fast
         ])
 
 
-        truncated = (np.abs(x) > 1) or (self._time > self.max_time)
-        terminated = self._time_balanced > 5
 
-        if truncated:
-            reward -= 200
-        if terminated:
-            reward += 200
+        truncated = (np.abs(x) > 1) or (self._time > self.max_time)
+        terminated = self._time_balanced > 1
+
+        if abs(x) > 1:
+            reward -= 50
+
+        if cos_theta > 0.9:
+            reward += 1
 
         return observation, reward, terminated, truncated, info
 

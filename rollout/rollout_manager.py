@@ -7,7 +7,7 @@ import shutil
 def worker_process(worker, task_queue, result_queue, num_episodes_per_worker):
     while True:
         if not task_queue.empty():
-            task = task_queue.get(timeout=1)
+            task = task_queue.get()
             if task == "ROLLOUT":
                 if worker.episodes_completed[worker.worker_id] == 0:
                     worker_results = worker.run_episodes(num_episodes=num_episodes_per_worker)
