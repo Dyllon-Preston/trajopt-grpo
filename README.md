@@ -8,6 +8,7 @@ This project implements reinforcement learning (RL) algorithms with a focus on P
 ## Table of Contents
 
 - [Overview](#overview)
+- [Visualizations](#visualizations)
 - [Core Components](#core-components)
   - [Algorithms](#algorithms)
   - [Environments](#environments)
@@ -24,8 +25,11 @@ This project implements reinforcement learning (RL) algorithms with a focus on P
 - [License](#license)
 - [Contributing](#contributing)
 
-## Core Components
+## Visualizations
 
+![CartPole PPO Simulation](https://github.com/Dyllon-Preston/trajopt-grpo/blob/main/reports/CartPole/cartpole_nn_ppo/001/simulation.gif)
+
+## Core Components
 ### Algorithms
 - **Base Algorithm Class:** An abstract class defining the RL algorithm interface.
 - **PPO Implementation:** Implementation of Proximal Policy Optimization.
