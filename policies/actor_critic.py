@@ -341,14 +341,7 @@ class GaussianActorCritic_NeuralNetwork(ActorCritic):
         """
         Load the state dictionary into the actor and critic networks.
         """
-        state_dict = torch.load(os.path.join(path, "policy.pt"))
-        self.actor.load_state_dict(state_dict['actor'])
-        self.critic.load_state_dict(state_dict['critic'])
-
-    def load_state_dict(self, state_dict):
-        """
-        Load the state dictionary into the actor and critic networks.
-        """
+        state_dict = torch.load(os.path.join(path, "policy.pt"), weights_only=True)
         self.actor.load_state_dict(state_dict['actor'])
         self.critic.load_state_dict(state_dict['critic'])
 

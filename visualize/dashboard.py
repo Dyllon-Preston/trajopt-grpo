@@ -77,7 +77,7 @@ class Dashboard(Visualizer):
         fontfamily="monospace"
 
         # Main grid: left for simulation plots, right for reward plot and table.
-        gs_main = gridspec.GridSpec(1, 2, figure=self.fig, width_ratios=[0.6, 0.4], wspace=0.05)
+        gs_main = gridspec.GridSpec(1, 2, figure=self.fig, width_ratios=[0.6, 0.4], wspace=0.1)
 
         # Left panel: Nested grid with a title and a 2x2 grid for simulation plots.
         gs_left_main = gridspec.GridSpecFromSubplotSpec(

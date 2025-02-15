@@ -1,7 +1,7 @@
 # Project Report: cartpole_nn_ppo
 
 **Checkpoint:** 001  
-**Creation Date:** 2025-02-14 20:36:36  
+**Creation Date:** 2025-02-15 18:39:43  
 **Environment:** CartPole
 
 ---
@@ -45,7 +45,7 @@ This report provides a comprehensive overview of the reinforcement learning proj
 ## Performance Metrics
 
 ### Buffer
-- **Average Reward:** 21.413198471069336
+- **Average Reward:** -39.574092864990234
 
 ---
 
@@ -73,7 +73,7 @@ This report provides a comprehensive overview of the reinforcement learning proj
 {
     "test_name": "cartpole_nn_ppo",
     "checkpoint_name": "001",
-    "creation_date": "2025-02-14 20:36:36",
+    "creation_date": "2025-02-15 18:39:43",
     "env_name": "CartPole",
     "policy": {
         "input_dim": 5,
@@ -104,7 +104,7 @@ This report provides a comprehensive overview of the reinforcement learning proj
         "updates_per_iter": 16
     },
     "buffer": {
-        "avg_reward": 21.413198471069336
+        "avg_reward": -39.574092864990234
     },
     "visualizer": {
         "max_episodes_per_render": 5

@@ -156,9 +156,9 @@ class CartPole(Env):
         reward += self.timestep*np.sum([
             -5*x**2, # Reward for staying near the center
             -xdot**2, # Penalty for moving the cart too fast
-            5*cos_theta**3 - 5, # Penalty for not keeping the pole upright
+            7*cos_theta**3 - 7, # Penalty for not keeping the pole upright
             -0.1*thetadot**2, # Penalty for moving the pole too fast
-            -0.01*(action**2).sum() # Penalty for using energy
+            -0.001*(action**2).sum() # Penalty for using energy
         ])
 
         truncated = (np.abs(x) > 1) or (self._time > self.max_time)
