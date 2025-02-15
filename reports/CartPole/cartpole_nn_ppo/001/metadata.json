@@ -1,0 +1,46 @@
+{
+    "test_name": "cartpole_nn_ppo",
+    "checkpoint_name": "001",
+    "creation_date": "2025-02-14 20:36:36",
+    "env_name": "CartPole",
+    "policy": {
+        "input_dim": 5,
+        "output_dim": 1,
+        "hidden_dims": [
+            128,
+            128,
+            128,
+            128
+        ],
+        "activation": "ReLU",
+        "cov": [
+            [
+                0.30000001192092896
+            ]
+        ],
+        "num_parameters": 100866
+    },
+    "algorithm": {
+        "algorithm": "PPO",
+        "epsilon": 0.2,
+        "c1": 0.5,
+        "kl_coeff": 0.5,
+        "gamma": 0.99,
+        "lam": 0.95,
+        "entropy": 0.01,
+        "batch_size": null,
+        "updates_per_iter": 16
+    },
+    "buffer": {
+        "avg_reward": 21.413198471069336
+    },
+    "visualizer": {
+        "max_episodes_per_render": 5
+    },
+    "publisher": {
+        "max_episodes_per_render": 5,
+        "author": "Dyllon Preston",
+        "env_name": "CartPole"
+    },
+    "logger": {}
+}

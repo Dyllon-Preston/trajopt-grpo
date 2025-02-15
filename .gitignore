@@ -11,4 +11,9 @@ __pycache__/
 reports/*
 
 # Keep specified reports
+
+# Example CartPole report
+!reports/CartPole/
+!reports/CartPole/cartpole_nn_ppo/
 !reports/CartPole/cartpole_nn_ppo/001/
+!reports/CartPole/cartpole_nn_ppo/001/**
