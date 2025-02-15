@@ -22,3 +22,12 @@ if __name__ == "__main__":
 
     # Optionally disable rendering by uncommenting the line below.
     # pipeline.render = False
+
+    # Run the pipeline.
+    pipeline.train(800)
+
+    # Publish the results.
+    pipeline.publish()
+
+    # Shutdown the pipeline.
+    pipeline.shutdown()
