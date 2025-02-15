@@ -1,11 +1,16 @@
+from .visualizer import Visualizer
+
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.ticker as mticker
 from datetime import date
 from typing import Any, List, Iterable
+import os
+import numpy as np
+import io
+from PIL import Image
 
-
-class Dashboard:
+class Dashboard(Visualizer):
     """
     Dashboard for visualizing training simulations, rewards, and metadata.
     
@@ -19,54 +24,54 @@ class Dashboard:
         sim_axes (List[plt.Axes]): List of axes for simulation plots.
         ax_sim_title (plt.Axes): Axis for the simulation plots title.
         reward_ax (plt.Axes): Axis for the reward plot (detailed view).
-        reward_ax_solo (plt.Axes): Axis for reward plot when not rendering simulations.
         table_ax (plt.Axes): Axis for the metadata table.
     """
 
     def __init__(
         self,
-        test_name: str,
-        checkpoint_name: str,
-        env_name: str,
-        algorithm_name: str,
-        policy_metadata: dict,
-        creation_date: str = "-",
-        render: bool = True,
+        env: object,
+        buffer: object,
         max_episodes_per_render: int = 5,
+        dpi: int = 200,
+        skip: int = 1,
     ) -> None:
         """
         Initialize the Dashboard.
         
         Parameters:
-            test_name (str): The name of the test.
-            checkpoint_name (str): The model checkpoint name.
-            env_name (str): The environment name.
-            algorithm_name (str): The name of the algorithm used.
-            policy_metadata (dict): Metadata from the policy (e.g., {'num_parameters': 123456}).
-            creation_date (str): Creation date of the model/dashboard.
-            render (bool): If True, creates a full dashboard with simulation plots; 
-                           otherwise, only a simple reward plot is created.
-            max_episodes_per_render (int): Maximum number of episodes to render in simulation plots.
+            env (object): The environment object.
+            buffer (object): The buffer object.
+            max_episodes_per_render (int): Maximum number of episodes to display in the simulation plots.
         """
-        self.test_name = test_name
-        self.checkpoint_name = checkpoint_name
-        self.env_name = env_name
-        self.algorithm_name = algorithm_name
-        self.policy_metadata = policy_metadata
-        self.creation_date = creation_date
-        self.render = render
+
+        super().__init__(buffer)
+
+        self.env = env
+        self.buffer = buffer
         self.max_episodes_per_render = max_episodes_per_render
+        self.dpi = dpi
+        self.skip = skip
 
-        if self.render:
-            self._initialize_dashboard()
-        else:
-            # Create a simple figure with a single reward axis.
-            self.fig, self.reward_ax_solo = plt.subplots(figsize=(8, 6))
-
-    def _initialize_dashboard(self) -> None:
+    def initialize(self, metadata: dict) -> None:
         """
         Create the full dashboard layout with simulation plots, reward plot, and metadata table.
         """
+
+        metadata
+        env_name = metadata.get("env_name", "N/A")
+        test_name = metadata.get("test_name", "N/A")
+        checkpoint_name = metadata.get("checkpoint_name", "N/A")
+        algorithm_name = metadata['algorithm'].get("algorithm", "N/A")
+        author_name = metadata['publisher'].get("author", "N/A")
+        num_parameters = metadata['policy'].get("num_parameters", "N/A")
+        if isinstance(num_parameters, int):
+            num_parameters = f"{num_parameters:,}"
+
+
+        # If fig exists, close it.
+        if hasattr(self, "fig"):
+            plt.close(self.fig)
+
         self.fig = plt.figure(figsize=(12, 6))
 
         fontfamily="monospace"
@@ -107,25 +112,27 @@ class Dashboard:
         self.reward_ax.set_title("Average Total Reward per Episode", fontfamily=fontfamily)
         self.reward_ax.set_xlabel("Epoch", fontfamily=fontfamily)
         self.reward_ax.set_ylabel("Reward", fontfamily=fontfamily)
+        self.reward_ax.grid(True)
 
         self.table_ax = self.fig.add_subplot(gs_right[1])
         self.table_ax.axis("off")
 
-        # Define metadata
-        metadata = {
+        # Define table_data
+        table_data = {
             "Experiment Date": str(date.today()),
-            "Environment Name": self.env_name,
-            "Model Checkpoint": f"{self.test_name} | {self.checkpoint_name}",
-            "Model Parameters": str(self.policy_metadata.get("num_parameters", "N/A")),
-            "Algorithm": self.algorithm_name,
+            "Environment Name": env_name,
+            "Model Checkpoint": f"{test_name} | {checkpoint_name}",
+            "Model Parameters": num_parameters,
+            "Algorithm": algorithm_name,
+            "Author": author_name,
         }
 
         # Compute max label width for alignment
-        max_label_length = max(len(label) for label in metadata.keys())
+        max_label_length = max(len(label) for label in table_data.keys())
 
         # Format text with padding
         formatted_text = "\n".join(
-            f"{label.ljust(max_label_length)}: {value}" for label, value in metadata.items()
+            f"{label.ljust(max_label_length)}: {value}" for label, value in table_data.items()
         )
 
         # Display text in the subplot
@@ -137,57 +144,122 @@ class Dashboard:
             verticalalignment="top",
         )
 
-    def _show(self) -> None:
-        """
-        Debug function to display the dashboard.
-        """
-        # self.fig.savefig("dashboard.png", dpi=300, bbox_inches="tight")
-        self.fig.show()
-
-    def update_reward_plot(self, reward_data: Iterable[Any]) -> None:
+    def _update_reward_plot(self) -> None:
         """
         Update the reward plot with new data.
+        """
+        ax = self.reward_ax
+        ax.cla()
+
+        avg_reward = self.buffer.avg_reward
+
+        # Moving average
+        window_size = 5
+        if len(avg_reward) > window_size:
+            avg_reward_ma = np.convolve(avg_reward, np.ones(window_size) / window_size, mode="valid")
+            x = np.arange(window_size-1, len(avg_reward))
+        else:
+            avg_reward_ma = 0
+            x = 0
+
+
+        ax.plot(avg_reward, alpha=0.8, label="Average Reward")
+        ax.plot(x, avg_reward_ma, color="red", label=f"Moving Average ({window_size})", alpha=0.8)
+        ax.grid(True)
+        ax.xaxis.set_major_locator(mticker.MaxNLocator(integer=True))
+        ax.set_xlabel("Epoch", fontfamily=self.fontfamily)
+        ax.set_ylabel("Reward", fontfamily=self.fontfamily)
+        ax.set_title("Average Total Reward per Episode", fontfamily=self.fontfamily)
+        ax.legend(prop={'size': 8, 'family': f'{self.fontfamily}'}, loc="upper left")
+
         
-        Parameters:
-            reward_data (Iterable[Any]): A sequence of reward values.
-        """
-        # Choose the appropriate axis based on rendering mode.
-        ax = self.reward_ax if self.render else self.reward_ax_solo
-        ax.clear()
-        ax.plot(reward_data, marker="o", linestyle="-", color="blue")
-        ax.set_title("Reward Progress")
-        ax.set_xlabel("Epoch")
-        ax.set_ylabel("Reward")
-        self.fig.canvas.draw_idle()
 
-    def update_simulation_plots(self, simulation_data: List[Iterable[Any]], title: str = "Simulation Plots") -> None:
+    def plot(
+        self,
+        show: bool = True,
+        ) -> None:
         """
-        Update the simulation plots with new data.
+        Update plotable data and display the dashboard.
+        """
+        self._update_reward_plot()
+        if show:
+            plt.pause(0.1)
         
-        Parameters:
-            simulation_data (List[Iterable[Any]]): A list of data sequences for each simulation subplot.
-            title (str): The title to display above the simulation plots.
-        """
-        if not self.render:
-            return
 
-        self.ax_sim_title.set_title(title, fontsize=16)
-        for ax, sim_data in zip(self.sim_axes, simulation_data):
-            ax.clear()
-            # Plot each simulation data (customize as needed).
-            ax.plot(sim_data, marker=".", linestyle="-", color="green")
-            ax.set_xlabel("Time")
-            ax.set_ylabel("Value")
-        self.fig.canvas.draw_idle()
+    def render(
+            self, 
+            show = True,
+            ) -> None:
+        """
+        Update renderable data and display the dashboard.
+        """
 
-    def refresh(self) -> None:
+        group_lengths = self.buffer.group_lengths
+
+        max_frame = int(group_lengths[:,:self.max_episodes_per_render].max())
+        for frame in range(0, max_frame, self.skip):
+            self._update_concurrent(
+                frame,
+                sim_axes=self.sim_axes,
+                title_ax=self.ax_sim_title,
+                buffer=self.buffer,
+                max_episodes=self.max_episodes_per_render,)
+            if show:
+                plt.pause(0.1)
+
+    def frames(self):
         """
-        Redraw the dashboard. Call after updating any plots.
+        Return the frames for the dashboard.
         """
-        self.fig.canvas.draw_idle()
+
+        self._update_reward_plot()
+
+        group_lengths = self.buffer.group_lengths
+
+        max_frame = int(group_lengths[:,:self.max_episodes_per_render].max())
+
+        frames = []
+        for frame in range(max_frame):
+            self._update_concurrent(
+                frame,
+                sim_axes=self.sim_axes,
+                title_ax=self.ax_sim_title,
+                buffer=self.buffer,
+                max_episodes=self.max_episodes_per_render,)
+            # Return frame as np array with tight bounding box
+            buf = io.BytesIO()
+            self.fig.savefig(buf, format="png", bbox_inches="tight", dpi=self.dpi)
+            buf.seek(0)
+
+            # Convert to PIL image
+            pil_image = Image.open(buf)
+            frames.append(pil_image)
+        
+        return frames
 
     def show(self) -> None:
         """
         Display the dashboard.
         """
         plt.show()
+
+    def metadata(self) -> dict:
+        """
+        Return the metadata of the dashboard.
+        """
+        metadata = {
+            "max_episodes_per_render": self.max_episodes_per_render,
+        }
+        return metadata
+    
+    def save(self, path: str) -> None:
+        """
+        Save the dashboard to a file.
+        """
+        self.fig.savefig(os.path.join(path, "dashboard.png"), bbox_inches="tight")
+
+    def close(self) -> None:
+        """
+        Close the dashboard.
+        """
+        plt.close(self.fig)

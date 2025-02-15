@@ -3,6 +3,7 @@ import torch
 import sys
 import time
 import shutil
+from .rollout_worker import RolloutWorker
 
 def worker_process(worker, task_queue, result_queue, num_episodes_per_worker):
     while True:
@@ -20,8 +21,8 @@ def worker_process(worker, task_queue, result_queue, num_episodes_per_worker):
 class RolloutManager:
     def __init__(self, 
                  env_fn: callable,
-                 worker_class,
                  policy,
+                 worker_class = RolloutWorker,
                  restart = False,
                  num_workers: int = 4,
                  num_episodes_per_worker: int = 5,
@@ -93,10 +94,10 @@ class RolloutManager:
                 self.task_queue.put("ROLLOUT")
 
             while any(ep < self.num_episodes_per_worker for ep in self.episodes_completed):
-                # self.print_progress()
+                self.print_progress()
                 time.sleep(0.1)
 
-            # self.print_progress()
+            self.print_progress()
 
             for _ in range(self.num_workers):
                 worker, worker_results = self.result_queue.get()

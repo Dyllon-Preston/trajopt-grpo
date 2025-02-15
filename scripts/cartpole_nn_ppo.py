@@ -1,89 +1,24 @@
 """
-Cartpole with GRPO and Neural Network Policy
+Main entry point for running the Cartpole simulation using PPO with a Neural Network Policy.
 """
-import torch
-from environments import CartPole
-from buffers import Rollout_Buffer
-from policies import GaussianActorCritic_NeuralNetwork
-from algorithms import PPO
-from train import Trainer
-from visualize import Dashboard
 
-from rollout import RolloutWorker, RolloutManager
+if __name__ == "__main__":
+    # Import the pipeline creation function for the Cartpole simulation.
+    from pipelines import create_cartpole_pipeline
 
-def env_fn():
-    return CartPole()
+    # Create the cartpole pipeline with specified test parameters.
+    pipeline = create_cartpole_pipeline(
+        test_name="cartpole_nn_ppo",      # Identifier for this test instance.
+        checkpoint_name="001",           # Checkpoint identifier for saving/loading progress.
+        # Optional: Specify a load path to resume from a previous checkpoint.
+        # load_path='archive/CartPole/cartpole_nn_ppo/001'
+    )
 
-policy = GaussianActorCritic_NeuralNetwork(
-    input_dim=5,
-    output_dim=1,
-    hidden_dims=(128, 128, 128, 128),
-    cov=0.3
-)
+    # Set metadata for publishing results.
+    pipeline.publisher.author = "Dyllon Preston"
 
-worker_class = RolloutWorker
+    # Configure visualization: skip frames for intermediate visualization steps.
+    pipeline.visualizer.skip = 10
 
-rollout_manager = RolloutManager(
-    env_fn=env_fn,
-    worker_class=worker_class,
-    policy=policy,
-    num_workers=10,
-    num_episodes_per_worker=5,
-)
-
-buffer = Rollout_Buffer(
-    rollout_manager = rollout_manager,
-)
-
-
-
-ref_model = None
-
-optimizer = torch.optim.Adam(policy.parameters(), lr=3e-4)
-
-algo = PPO(
-    epsilon=0.2,
-    c1 = 0.5,
-    kl_coeff=0.5,
-    policy=policy,
-    optimizer = optimizer,
-    ref_model = ref_model,
-    updates_per_iter = 16,
-    gamma = 0.99,
-    lam = 0.95,
-    entropy = 0.01,
-    batch_size = int(1e6),
-)
-
-
-db = Dashboard(
-    test_name = "cartpole_nn_ppo",
-    checkpoint_name = "002",
-    env_name = "CartPole",
-    algorithm_name = "PPO",
-    policy_metadata = {"num_parameters": policy.metadata()['num_parameters']},
-    render = True,
-    max_episodes_per_render = 5
-)
-
-breakpoint()
-
-
-trainer = Trainer(
-    test_name = "cartpole_nn_ppo",
-    checkpoint_name = "002",
-    buffer = buffer,
-    policy = policy,
-    ref_model = ref_model,
-    algorithm = algo,
-    epochs = 1000,
-    render = True,
-    render_freq = 40,
-    max_episodes_per_render = 5
-)
-
-trainer.run()
-
-breakpoint()
-
-Trainer.shutdown()
+    # Optionally disable rendering by uncommenting the line below.
+    # pipeline.render = False

@@ -11,8 +11,8 @@ class CartPole(Env):
             masspole: float=1.0, # kg
             length: float=0.5, # m
             gravity: float=9.80665, # m/s²
-            timestep: float=0.05, # s
-            max_steps: int=200,
+            timestep: float=0.02, # s
+            max_steps: int=500,
             ):
         
         # Initialize the environment
@@ -147,28 +147,25 @@ class CartPole(Env):
         # Increment the time steps
         self._steps += 1
         self._time += self.timestep
-        self._time_balanced = self._time_balanced + self.timestep if np.abs(theta) < 0.05 else 0
+        self._time_balanced = self._time_balanced + self.timestep if np.abs(theta) < 0.1 and np.abs(x) < 0.1 else 0
 
         # Get the observation and info
         observation = self._get_obs()
         info = self._get_info()
 
         reward += self.timestep*np.sum([
-            -x**2, # Reward for staying near the center
-            3*cos_theta, # Penalty for not keeping the pole upright
+            -5*x**2, # Reward for staying near the center
+            -xdot**2, # Penalty for moving the cart too fast
+            5*cos_theta**3 - 5, # Penalty for not keeping the pole upright
             -0.1*thetadot**2, # Penalty for moving the pole too fast
+            -0.01*(action**2).sum() # Penalty for using energy
         ])
-
-
 
         truncated = (np.abs(x) > 1) or (self._time > self.max_time)
         terminated = self._time_balanced > 1
 
         if abs(x) > 1:
             reward -= 50
-
-        if cos_theta > 0.9:
-            reward += 1
 
         return observation, reward, terminated, truncated, info
 

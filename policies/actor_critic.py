@@ -4,6 +4,7 @@ from models import NeuralNetwork
 from typing import Union
 from abc import ABC, abstractmethod
 import numpy as np
+import os
 
 class ActorCritic(ABC):
     """
@@ -204,19 +205,15 @@ class GaussianActor_NeuralNetwork(ActorCritic):
             'num_parameters': sum(p.numel() for p in self.actor.parameters()),
         }
 
-    def save(self, save_path):
+    def save(self, path):
         """
         Save the actor network's state dictionary to a file.
 
         Parameters:
             save_path (str): The path to the file where the state dictionary will be saved.
         """
-        torch.save(self.actor.state_dict(), save_path + 'model.pt')
+        torch.save(self.actor.state_dict(), os.path.join(path, "policy.pt"))
 
-        metadata = self.metadata()
-        with open(save_path + 'metadata.txt', 'w') as f:
-            for key, value in metadata.items():
-                f.write(f"{key}: {value}\n")
 
 
 
@@ -340,6 +337,14 @@ class GaussianActorCritic_NeuralNetwork(ActorCritic):
             'critic': self.critic.state_dict()
         }
     
+    def load(self, path):
+        """
+        Load the state dictionary into the actor and critic networks.
+        """
+        state_dict = torch.load(os.path.join(path, "policy.pt"))
+        self.actor.load_state_dict(state_dict['actor'])
+        self.critic.load_state_dict(state_dict['critic'])
+
     def load_state_dict(self, state_dict):
         """
         Load the state dictionary into the actor and critic networks.
@@ -370,10 +375,4 @@ class GaussianActorCritic_NeuralNetwork(ActorCritic):
         Parameters:
             save_path (str): The path to the file where the state dictionaries will be saved.
         """
-        torch.save(self.state_dict(), save_path + 'policy.pt')
-
-        metadata = self.metadata()
-        with open(save_path + 'metadata.txt', 'w') as f:
-            for key, value in metadata.items():
-                f.write(f"{key}: {value}\n")
-                
+        torch.save(self.state_dict(), os.path.join(save_path, "policy.pt"))
