@@ -35,12 +35,13 @@ class Publisher:
         self.env = self.buffer.rollout_manager.env_fn()
         self.env_name = getattr(self.env, "env_name", "Unknown Environment")
 
-    def create_gif(self, path: str, fps: Optional[int] = None) -> None:
+    def create_gif(self, path: str, skip = 1, fps: Optional[int] = None) -> None:
         """
         Create an optimized GIF of the simulation plots that loops indefinitely.
 
         Args:
             path (str): The file path where the GIF will be saved.
+            skip (FIX ME)
             fps (Optional[int]): Frames per second for the GIF. If None, defaults to the inverse of the environment's timestep.
         """
         frames = self.visualizer.frames()
