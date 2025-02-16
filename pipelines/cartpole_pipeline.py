@@ -91,6 +91,7 @@ def create_cartpole_pipeline(
         visualizer=visualizer,
         max_episodes_per_render=5,
         author=None,
+        frame_skip=3
     )    
 
     return Pipeline(

@@ -16,6 +16,7 @@ class Publisher:
         visualizer: Any,
         max_episodes_per_render: int = 5,
         author: Optional[str] = None,
+        frame_skip: int = 1,
     ) -> None:
         """
         Initialize the Publisher.
@@ -25,23 +26,24 @@ class Publisher:
             visualizer (Any): Visualizer component that produces simulation frames.
             max_episodes_per_render (int): Maximum number of episodes to render in simulation plots.
             author (Optional[str]): Name of the report author.
+            frame_skip (int): Number of frames to skip in the GIF visualization.
         """
         self.buffer = buffer
         self.visualizer = visualizer
         self.max_episodes_per_render = max_episodes_per_render
         self.author = author
+        self.frame_skip = frame_skip
 
         # Initialize environment via the buffer's rollout manager
         self.env = self.buffer.rollout_manager.env_fn()
         self.env_name = getattr(self.env, "env_name", "Unknown Environment")
 
-    def create_gif(self, path: str, skip = 1, fps: Optional[int] = None) -> None:
+    def create_gif(self, path: str, fps: Optional[int] = None) -> None:
         """
         Create an optimized GIF of the simulation plots that loops indefinitely.
 
         Args:
             path (str): The file path where the GIF will be saved.
-            skip (FIX ME)
             fps (Optional[int]): Frames per second for the GIF. If None, defaults to the inverse of the environment's timestep.
         """
         frames = self.visualizer.frames()
@@ -49,6 +51,10 @@ class Publisher:
         if fps is None:
             timestep = getattr(self.env, "timestep", None)
             fps = 1 / timestep if timestep else 1
+
+        if self.frame_skip > 1:
+             frames = frames[::self.frame_skip]
+             fps = fps / self.frame_skip
 
         # Save the GIF with optimizations: duration is in milliseconds per frame.
         frames[0].save(
