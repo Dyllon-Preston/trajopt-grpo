@@ -57,7 +57,7 @@ This project implements reinforcement learning (RL) algorithms with a focus on P
 - **RolloutWorker:** Collects episodes and trajectories from individual environment instances.
 
 ### Training
-- **Trainer:** Orchestrates the training process, including rollout collection, buffer management, and model updates.
+- **Pipeline:** Orchestrates the training process, including rollout collection, buffer management, and model updates.
 - **Checkpoint Management:** Save and load model checkpoints and training metadata.
 
 ## Scripts
