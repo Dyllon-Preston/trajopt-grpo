@@ -1,73 +1,34 @@
 """
-Cartpole with GRPO and Neural Network Policy
+Main entry point for running the Cartpole simulation using GRPO with a Neural Network Policy.
 """
-import torch
-from environments import CartPole
-from buffers import Rollout_Buffer
-from policies import GaussianActor_NeuralNetwork
-from algorithms import GRPO
-from train import Trainer
 
-from rollout import RolloutWorker
-from rollout import RolloutManager
+if __name__ == "__main__":
+    # Import the pipeline creation function for the Cartpole simulation.
+    from pipelines import create_cartpole_pipeline_grpo
 
-def env_fn():
-    return CartPole()
+    # Create the cartpole pipeline with specified test parameters.
+    pipeline = create_cartpole_pipeline_grpo(
+        test_name="cartpole_nn_grpo",      # Identifier for this test instance.
+        checkpoint_name="001",           # Checkpoint identifier for saving/loading progress.
+        # Optional: Specify a load path to resume from a previous checkpoint.
+        # load_path='archive/CartPole/cartpole_nn_grpo/001'
+    )
 
-policy = GaussianActor_NeuralNetwork(
-    input_dim=5,
-    output_dim=1,
-    hidden_dims=(256, 256, 256),
-    cov=0.5
-)
+    # Set metadata for publishing results.
+    pipeline.publisher.author = "Dyllon Preston"
+    pipeline.initialize() # Update pipelien to refresh author name
 
-worker_class = RolloutWorker
+    # Configure visualization: skip frames for intermediate visualization steps (prevents rendering lag).
+    pipeline.visualizer.skip = 10
 
-rollout_manager = RolloutManager(
-    env_fn=env_fn,
-    worker_class=worker_class,
-    policy=policy,
-    num_workers=10,
-    num_episodes_per_worker=15,
-)
+    # Optionally disable rendering by uncommenting the line below.
+    # pipeline.render = False
 
-buffer = Rollout_Buffer(
-    rollout_manager = rollout_manager,
-)
+    # Run the pipeline.
+    pipeline.train(800)
 
+    # Publish the results.
+    pipeline.publish()
 
-
-ref_model = None
-
-optimizer = torch.optim.Adam(policy.parameters(), lr=1e-5)
-
-algo = GRPO(
-    epsilon=0.2,
-    beta=0.01,
-    policy=policy,
-    optimizer = optimizer,
-    ref_model = ref_model,
-    updates_per_iter = 5
-    
-)
-
-trainer = Trainer(
-    test_name = "cartpole_nn_grpo",
-    checkpoint_name = "001",
-    buffer = buffer,
-    policy = policy,
-    ref_model = ref_model,
-    algorithm = algo,
-    epochs = 1000,
-    render = True,
-    render_freq = 20,
-    max_episodes_per_render = 1,
-    
-
-)
-
-trainer.run()
-
-breakpoint()
-
-Trainer.shutdown()
+    # Shutdown the pipeline.
+    pipeline.shutdown()

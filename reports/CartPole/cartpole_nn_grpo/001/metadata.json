@@ -1,0 +1,41 @@
+{
+    "test_name": "cartpole_nn_grpo",
+    "checkpoint_name": "001",
+    "creation_date": "2025-02-16 15:22:08",
+    "env_name": "CartPole",
+    "policy": {
+        "input_dim": 5,
+        "output_dim": 1,
+        "hidden_dims": [
+            128,
+            128,
+            128,
+            128
+        ],
+        "activation": "ReLU",
+        "cov": [
+            [
+                0.5
+            ]
+        ],
+        "num_parameters": 50433
+    },
+    "algorithm": {
+        "algorithm": "GRPO",
+        "epsilon": 0.15,
+        "beta": 0.5,
+        "updates_per_iter": 1
+    },
+    "buffer": {
+        "avg_reward": -62.198944091796875
+    },
+    "visualizer": {
+        "max_episodes_per_render": 5
+    },
+    "publisher": {
+        "max_episodes_per_render": 5,
+        "author": "Dyllon Preston",
+        "env_name": "CartPole"
+    },
+    "logger": {}
+}

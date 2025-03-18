@@ -34,11 +34,11 @@ class RolloutWorker:
         obs_dim = self.env.observation_space.shape[0]
         act_dim = self.env.action_space.shape[0]
 
-        episodic_observations = np.zeros((num_episodes, max_steps, obs_dim))
-        episodic_actions = np.zeros((num_episodes, max_steps, act_dim))
-        episodic_rewards = np.zeros((num_episodes, max_steps))
-        episodic_lengths = np.zeros(num_episodes, dtype=int)
-        episodic_masks = np.zeros((num_episodes, max_steps))
+        group_observations = np.zeros((num_episodes, max_steps, obs_dim))
+        group_actions = np.zeros((num_episodes, max_steps, act_dim))
+        group_rewards = np.zeros((num_episodes, max_steps))
+        group_lengths = np.zeros(num_episodes, dtype=int)
+        group_masks = np.zeros((num_episodes, max_steps))
 
         for episode in range(num_episodes):
             observations = np.zeros((max_steps, obs_dim))
@@ -61,11 +61,11 @@ class RolloutWorker:
                 done = terminated or truncated
                 step_idx += 1  # Increment step counter
 
-            episodic_observations[episode, :step_idx] = observations[:step_idx]
-            episodic_actions[episode, :step_idx] = actions[:step_idx]
-            episodic_rewards[episode, :step_idx] = rewards[:step_idx]
-            episodic_lengths[episode] = step_idx  # Store episode length
-            episodic_masks[episode, :step_idx] = 1  # Mark valid steps
+            group_observations[episode, :step_idx] = observations[:step_idx]
+            group_actions[episode, :step_idx] = actions[:step_idx]
+            group_rewards[episode, :step_idx] = rewards[:step_idx]
+            group_lengths[episode] = step_idx  # Store episode length
+            group_masks[episode, :step_idx] = 1  # Mark valid steps
 
             if restart:
                 observation, info = self.env.restart()  # Return to initial state for the next episode
@@ -74,13 +74,11 @@ class RolloutWorker:
 
             self.episodes_completed[self.worker_id] = episode + 1
 
-
-
         # Convert to torch tensors
-        episodic_observations = torch.from_numpy(episodic_observations).float()
-        episodic_actions = torch.from_numpy(episodic_actions).float()
-        episodic_rewards = torch.from_numpy(episodic_rewards).float()
-        episodic_lengths = torch.from_numpy(episodic_lengths).int()
-        episodic_masks = torch.from_numpy(episodic_masks).float()
+        group_observations = torch.from_numpy(group_observations).float()
+        group_actions = torch.from_numpy(group_actions).float()
+        group_rewards = torch.from_numpy(group_rewards).float()
+        group_lengths = torch.from_numpy(group_lengths).int()
+        group_masks = torch.from_numpy(group_masks).float()
         
-        return episodic_observations, episodic_actions, episodic_rewards, episodic_lengths, episodic_masks
+        return group_observations, group_actions, group_rewards, group_lengths, group_masks

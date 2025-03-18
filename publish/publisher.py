@@ -14,7 +14,6 @@ class Publisher:
         self,
         buffer: Any,
         visualizer: Any,
-        max_episodes_per_render: int = 5,
         author: Optional[str] = None,
         frame_skip: int = 1,
     ) -> None:
@@ -24,13 +23,11 @@ class Publisher:
         Args:
             buffer (Any): Buffer containing rollout data and simulation information.
             visualizer (Any): Visualizer component that produces simulation frames.
-            max_episodes_per_render (int): Maximum number of episodes to render in simulation plots.
             author (Optional[str]): Name of the report author.
             frame_skip (int): Number of frames to skip in the GIF visualization.
         """
         self.buffer = buffer
         self.visualizer = visualizer
-        self.max_episodes_per_render = max_episodes_per_render
         self.author = author
         self.frame_skip = frame_skip
 
@@ -87,7 +84,6 @@ class Publisher:
             Dict[str, Any]: A dictionary containing metadata details.
         """
         return {
-            "max_episodes_per_render": self.max_episodes_per_render,
             "author": self.author,
             "env_name": self.env_name,
         }
@@ -184,7 +180,6 @@ This report provides a comprehensive overview of the reinforcement learning proj
 - **Max Episodes per Render:** {visualizer.get("max_episodes_per_render", "N/A")}
 
 ### Publisher
-- **Max Episodes per Render:** {publisher.get("max_episodes_per_render", "N/A")}
 - **Author:** {publisher.get("author", "N/A")}
 - **Publisher Creation Date:** {publisher.get("creation_date", "N/A")}
 - **Environment:** {publisher.get("env_name", "N/A")}

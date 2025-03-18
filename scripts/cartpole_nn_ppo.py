@@ -4,14 +4,14 @@ Main entry point for running the Cartpole simulation using PPO with a Neural Net
 
 if __name__ == "__main__":
     # Import the pipeline creation function for the Cartpole simulation.
-    from pipelines import create_cartpole_pipeline
+    from pipelines import create_cartpole_pipeline_ppo
 
     # Create the cartpole pipeline with specified test parameters.
-    pipeline = create_cartpole_pipeline(
+    pipeline = create_cartpole_pipeline_ppo(
         test_name="cartpole_nn_ppo",      # Identifier for this test instance.
-        checkpoint_name="001",           # Checkpoint identifier for saving/loading progress.
+        checkpoint_name="002",           # Checkpoint identifier for saving/loading progress.
         # Optional: Specify a load path to resume from a previous checkpoint.
-        load_path='archive/CartPole/cartpole_nn_ppo/001'
+        # load_path='archive/CartPole/cartpole_nn_ppo/001'
     )
 
     # Set metadata for publishing results.
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # pipeline.render = False
 
     # Run the pipeline.
-    # pipeline.train(800)
+    pipeline.train(800)
 
     # Publish the results.
     pipeline.publish()

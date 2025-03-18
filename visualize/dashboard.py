@@ -90,12 +90,21 @@ class Dashboard(Visualizer):
         gs_left = gridspec.GridSpecFromSubplotSpec(
             2, 2, subplot_spec=gs_left_main[1], hspace=0.1, wspace=-0.17
         )
-        self.sim_axes = [
-            self.fig.add_subplot(gs_left[0, 0]),
-            self.fig.add_subplot(gs_left[0, 1]),
-            self.fig.add_subplot(gs_left[1, 0]),
-            self.fig.add_subplot(gs_left[1, 1]),
-        ]
+
+        if self.env._is_3d:
+            self.sim_axes = [
+                self.fig.add_subplot(gs_left[0, 0], projection="3d"),
+                self.fig.add_subplot(gs_left[0, 1], projection="3d"),
+                self.fig.add_subplot(gs_left[1, 0], projection="3d"),
+                self.fig.add_subplot(gs_left[1, 1], projection="3d"),
+            ]
+        else:
+            self.sim_axes = [
+                self.fig.add_subplot(gs_left[0, 0]),
+                self.fig.add_subplot(gs_left[0, 1]),
+                self.fig.add_subplot(gs_left[1, 0]),
+                self.fig.add_subplot(gs_left[1, 1]),
+            ]
 
         # Set axis properties.
         for ax in self.sim_axes:

@@ -66,11 +66,6 @@ class Pipeline:
 
         self.today = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Set up directories for archiving and publishing
-        self.archive_path = os.path.join(".", "archive", self.env_name, self.test_name, self.checkpoint_name)
-        self.publish_path = os.path.join(".", "reports", self.env_name, self.test_name, self.checkpoint_name)
-        os.makedirs(self.archive_path, exist_ok=True)
-
         # Load pipeline components if available
         if load_path is not None:
             self.load()
@@ -81,6 +76,12 @@ class Pipeline:
         """
         Initialize pipeline components by loading metadata if available and initializing the visualizer.
         """
+
+        # Set up directories for archiving and publishing
+        self.archive_path = os.path.join(".", "archive", self.env_name, self.test_name, self.checkpoint_name)
+        self.publish_path = os.path.join(".", "reports", self.env_name, self.test_name, self.checkpoint_name)
+        os.makedirs(self.archive_path, exist_ok=True)
+
         if self.load_path is not None:
             metadata_path = os.path.join(self.load_path, "metadata.json")
             self.load_metadata(metadata_path)
@@ -162,7 +163,6 @@ class Pipeline:
             self.buffer.sample()
             self.algorithm.learn(self.buffer)
 
-
             # check if visualizer has plot method
             if hasattr(self.visualizer, "plot"):
                 self.visualizer.plot()
@@ -191,6 +191,14 @@ class Pipeline:
         self.publisher.publish(self.publish_path)
         self.publisher.report(self.publish_path, self.get_metadata())
         self.save(self.publish_path)
+
+    def save_trajectory(self) -> None:
+        """
+        Save the trajectory of the model by sampling from the buffer and saving the trajectory.
+        """
+        self.buffer.sample()
+        self.buffer.save_trajectory(self.archive_path)
+
 
     def shutdown(self) -> None:
         """

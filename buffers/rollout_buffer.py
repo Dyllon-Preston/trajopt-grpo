@@ -5,6 +5,7 @@ import matplotlib.ticker as mticker
 from typing import Union
 from buffers.buffer import Buffer
 import os
+import pandas as pd
 
 class Rollout_Buffer(Buffer):
     def __init__(
@@ -67,6 +68,40 @@ class Rollout_Buffer(Buffer):
         self.group_masks = group_masks
 
         self.avg_reward.append(group_rewards.sum(2).mean().detach().numpy())
+
+    def save_trajectory(self, path: str):
+        """
+        Save the trajectory to a CSV file.
+        """
+        group_observations = self.group_observations.detach().numpy()
+        group_actions = self.group_actions.detach().numpy()
+        group_lengths = self.group_lengths.detach().numpy().astype(int)
+
+
+        observations = np.empty((0, group_observations.shape[3]))
+        actions = np.empty((0, group_actions.shape[3]))
+        episode_id = []
+
+        for i in range(group_lengths.shape[0]):
+            for j in range(group_lengths.shape[1]):
+                observations = np.vstack((observations, group_observations[i, j, :group_lengths[i, j]]))
+                actions = np.vstack((actions, group_actions[i, j, :group_lengths[i, j]]))
+                episode_id.extend([j + i*group_lengths.shape[1]] * group_lengths[i, j])
+
+        episode_id = np.array(episode_id).reshape(-1, 1)
+
+        # Header for the CSV file
+        header = ['episode_id']
+        header += ["observation_{}".format(i) for i in range(group_observations.shape[3])]
+        header += ["action_{}".format(i) for i in range(group_actions.shape[3])]
+
+        # Create a dataframe
+        df = pd.DataFrame(np.hstack([episode_id, observations, actions]), columns=header)
+        df['episode_id'] = df['episode_id'].astype(int)
+        # Save the dataframe to a CSV file
+        df.to_csv(os.path.join(path, "trajectory.csv"), index=False)
+
+
 
             
     def retrieve(self):

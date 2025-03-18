@@ -157,7 +157,7 @@ class GaussianActor_NeuralNetwork(ActorCritic):
 
         mean_action = self.actor(observation)
         dist = MultivariateNormal(mean_action, self.cov)
-        return dist.log_prob(action)
+        return dist.log_prob(action), dist.entropy()
     
     def value(self, state):
         """
@@ -342,6 +342,13 @@ class GaussianActorCritic_NeuralNetwork(ActorCritic):
         Load the state dictionary into the actor and critic networks.
         """
         state_dict = torch.load(os.path.join(path, "policy.pt"), weights_only=True)
+        self.actor.load_state_dict(state_dict['actor'])
+        self.critic.load_state_dict(state_dict['critic'])
+
+    def load_state_dict(self, state_dict):
+        """
+        Load the state dictionary into the actor and critic networks.
+        """
         self.actor.load_state_dict(state_dict['actor'])
         self.critic.load_state_dict(state_dict['critic'])
 

@@ -17,3 +17,9 @@ reports/*
 !reports/CartPole/cartpole_nn_ppo/
 !reports/CartPole/cartpole_nn_ppo/001/
 !reports/CartPole/cartpole_nn_ppo/001/**
+
+# Example QuadPole2D report
+!reports/QuadPole2D/
+!reports/QuadPole2D/quadpole2d_nn_ppo/
+!reports/QuadPole2D/quadpole2d_nn_ppo/001/
+!reports/QuadPole2D/quadpole2d_nn_ppo/001/**
