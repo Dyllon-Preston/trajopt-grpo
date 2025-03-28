@@ -27,6 +27,7 @@ This project implements reinforcement learning (RL) algorithms with a focus on P
 
 ## Visualizations
 
+![QuadPole2D PPO Simulation](https://github.com/Dyllon-Preston/trajopt-grpo/blob/main/reports/QuadPole2D/quadpole2d_nn_ppo/001/simulation.gif)
 ![CartPole PPO Simulation](https://github.com/Dyllon-Preston/trajopt-grpo/blob/main/reports/CartPole/cartpole_nn_ppo/001/simulation.gif)
 
 ## Core Components
@@ -56,7 +57,7 @@ This project implements reinforcement learning (RL) algorithms with a focus on P
 - **RolloutWorker:** Collects episodes and trajectories from individual environment instances.
 
 ### Training
-- **Trainer:** Orchestrates the training process, including rollout collection, buffer management, and model updates.
+- **Pipeline:** Orchestrates the training process, including rollout collection, buffer management, and model updates.
 - **Checkpoint Management:** Save and load model checkpoints and training metadata.
 
 ## Scripts
