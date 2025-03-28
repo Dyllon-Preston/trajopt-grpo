@@ -1,7 +1,7 @@
 # Project Report: quadpole2d_nn_ppo
 
 **Checkpoint:** 001  
-**Creation Date:** 2025-03-18 14:05:48  
+**Creation Date:** 2025-03-28 01:14:03  
 **Environment:** QuadPole2D
 
 ---
@@ -21,17 +21,17 @@ This report provides a comprehensive overview of the reinforcement learning proj
 ### Policy Configuration
 - **Input Dimension:** 10
 - **Output Dimension:** 2
-- **Hidden Layers:** 128, 128, 128, 128
+- **Hidden Layers:** 128, 128, 128
 - **Activation Function:** ReLU
-- **Covariance:** [[0.20000000298023224, 0.0], [0.0, 0.20000000298023224]]
-- **Number of Parameters:** 102275
+- **Covariance:** [[0.5, 0.0], [0.0, 0.5]]
+- **Number of Parameters:** 69251
 
 ---
 
 ## Algorithm Configuration
 
 - **Algorithm:** PPO
-- **Epsilon:** 0.15
+- **Epsilon:** 0.2
 - **C1 (Value Loss Coefficient):** 0.5
 - **KL Coefficient:** 0.5
 - **Gamma (Discount Factor):** 0.99
@@ -45,7 +45,7 @@ This report provides a comprehensive overview of the reinforcement learning proj
 ## Performance Metrics
 
 ### Buffer
-- **Average Reward:** 921.870361328125
+- **Average Reward:** 1047.6397705078125
 
 ---
 
@@ -72,7 +72,7 @@ This report provides a comprehensive overview of the reinforcement learning proj
 {
     "test_name": "quadpole2d_nn_ppo",
     "checkpoint_name": "001",
-    "creation_date": "2025-03-18 14:05:48",
+    "creation_date": "2025-03-28 01:14:03",
     "env_name": "QuadPole2D",
     "policy": {
         "input_dim": 10,
@@ -80,25 +80,24 @@ This report provides a comprehensive overview of the reinforcement learning proj
         "hidden_dims": [
             128,
             128,
-            128,
             128
         ],
         "activation": "ReLU",
         "cov": [
             [
-                0.20000000298023224,
+                0.5,
                 0.0
             ],
             [
                 0.0,
-                0.20000000298023224
+                0.5
             ]
         ],
-        "num_parameters": 102275
+        "num_parameters": 69251
     },
     "algorithm": {
         "algorithm": "PPO",
-        "epsilon": 0.15,
+        "epsilon": 0.2,
         "c1": 0.5,
         "kl_coeff": 0.5,
         "gamma": 0.99,
@@ -108,7 +107,7 @@ This report provides a comprehensive overview of the reinforcement learning proj
         "updates_per_iter": 24
     },
     "buffer": {
-        "avg_reward": 921.870361328125
+        "avg_reward": 1047.6397705078125
     },
     "visualizer": {
         "max_episodes_per_render": 5

@@ -1195,9 +1195,9 @@ class QuadPole2D(Env):
         reward += self.timestep * np.sum([
             - 15.0*pos_cost,       
             - 0.5*vel_cost,       
-            - theta_cost,    
+            - 5.0*theta_cost,    
             - 5*omega_cost,
-            - (25.0*phi_cost - 25.0)*(1/(1 + 2*phi_dot_cost)) # Balancing reward
+            - (25.0*phi_cost - 25.0)*(1/(1 + 5*phi_dot_cost)) # Balancing reward
         ])
 
         # Apply a bonus reward if the quadrotor is balanced
@@ -1214,7 +1214,7 @@ class QuadPole2D(Env):
         # Apply heavy penalty if out-of-bounds
         oob = self.out_of_bounds()
         if oob:
-            reward -= 20_000 * self.timestep
+            reward -= 1_000 * self.timestep
 
         # Determine if the episode should be truncated
         truncated = self._steps >= self.max_steps or oob

@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # pipeline.render = False
 
     # Run the pipeline.
-    pipeline.train(800)
+    pipeline.train(1600)
 
     # Publish the results.
     pipeline.publish()
