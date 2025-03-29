@@ -37,6 +37,8 @@ class CartPole(Env):
             'cartpole': np.zeros(5)
         }
 
+        self._is_3d = False
+
         # Define the observation and action spaces
         self.observation_space = gym.spaces.Box(
             low=-1, high=1, shape=(5,), dtype=np.float32)
@@ -99,6 +101,7 @@ class CartPole(Env):
     
     def reset(self):
         theta = np.random.uniform(-np.pi, np.pi)
+
         self.state_dict['cartpole'] = np.array([
             0,
             0,
@@ -147,22 +150,31 @@ class CartPole(Env):
         # Increment the time steps
         self._steps += 1
         self._time += self.timestep
-        self._time_balanced = self._time_balanced + self.timestep if np.abs(theta) < 0.1 and np.abs(x) < 0.1 else 0
 
         # Get the observation and info
         observation = self._get_obs()
         info = self._get_info()
 
+        theta_cost = -cos_theta**3
+        thetadot_cost = thetadot**2
+
         reward += self.timestep*np.sum([
             -5*x**2, # Reward for staying near the center
-            -xdot**2, # Penalty for moving the cart too fast
-            7*cos_theta**3 - 7, # Penalty for not keeping the pole upright
-            -0.1*thetadot**2, # Penalty for moving the pole too fast
+            -0.5*xdot**2, # Penalty for moving the cart too fast
+            -(20.0*theta_cost - 20.0)*(1/(1 + 2*thetadot_cost)) # Balancing reward
             -0.001*(action**2).sum() # Penalty for using energy
         ])
 
         truncated = (np.abs(x) > 1) or (self._time > self.max_time)
-        terminated = self._time_balanced > 1
+        terminated = False
+
+
+        # Apply a bonus reward if the cartpole is balanced
+        if abs(x) < 0.1 and cos_theta > 0.95 and abs(thetadot) < 0.1:
+            reward += 100*self.timestep
+            self._time_balanced += self.timestep
+        else:
+            self._time_balanced = 0
 
         if abs(x) > 1:
             reward -= 50

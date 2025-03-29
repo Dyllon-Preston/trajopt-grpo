@@ -1,7 +1,7 @@
 # Project Report: cartpole_nn_ppo
 
 **Checkpoint:** 001  
-**Creation Date:** 2025-02-15 21:22:13  
+**Creation Date:** 2025-03-29 12:26:32  
 **Environment:** CartPole
 
 ---
@@ -21,10 +21,10 @@ This report provides a comprehensive overview of the reinforcement learning proj
 ### Policy Configuration
 - **Input Dimension:** 5
 - **Output Dimension:** 1
-- **Hidden Layers:** 128, 128, 128, 128
+- **Hidden Layers:** 128, 128, 128
 - **Activation Function:** ReLU
-- **Covariance:** [[0.30000001192092896]]
-- **Number of Parameters:** 100866
+- **Covariance:** [[0.5]]
+- **Number of Parameters:** 67842
 
 ---
 
@@ -38,14 +38,14 @@ This report provides a comprehensive overview of the reinforcement learning proj
 - **Lambda (GAE):** 0.95
 - **Entropy Coefficient:** 0.01
 - **Batch Size:** None
-- **Updates per Iteration:** 16
+- **Updates per Iteration:** 24
 
 ---
 
 ## Performance Metrics
 
 ### Buffer
-- **Average Reward:** -35.2374267578125
+- **Average Reward:** 800.7862548828125
 
 ---
 
@@ -55,7 +55,6 @@ This report provides a comprehensive overview of the reinforcement learning proj
 - **Max Episodes per Render:** 5
 
 ### Publisher
-- **Max Episodes per Render:** 5
 - **Author:** Dyllon Preston
 - **Publisher Creation Date:** N/A
 - **Environment:** CartPole
@@ -73,7 +72,7 @@ This report provides a comprehensive overview of the reinforcement learning proj
 {
     "test_name": "cartpole_nn_ppo",
     "checkpoint_name": "001",
-    "creation_date": "2025-02-15 21:22:13",
+    "creation_date": "2025-03-29 12:26:32",
     "env_name": "CartPole",
     "policy": {
         "input_dim": 5,
@@ -81,16 +80,15 @@ This report provides a comprehensive overview of the reinforcement learning proj
         "hidden_dims": [
             128,
             128,
-            128,
             128
         ],
         "activation": "ReLU",
         "cov": [
             [
-                0.30000001192092896
+                0.5
             ]
         ],
-        "num_parameters": 100866
+        "num_parameters": 67842
     },
     "algorithm": {
         "algorithm": "PPO",
@@ -101,16 +99,15 @@ This report provides a comprehensive overview of the reinforcement learning proj
         "lam": 0.95,
         "entropy": 0.01,
         "batch_size": null,
-        "updates_per_iter": 16
+        "updates_per_iter": 24
     },
     "buffer": {
-        "avg_reward": -35.2374267578125
+        "avg_reward": 800.7862548828125
     },
     "visualizer": {
         "max_episodes_per_render": 5
     },
     "publisher": {
-        "max_episodes_per_render": 5,
         "author": "Dyllon Preston",
         "env_name": "CartPole"
     },

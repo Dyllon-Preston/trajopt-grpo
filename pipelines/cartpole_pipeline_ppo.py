@@ -54,17 +54,17 @@ def create_cartpole_pipeline_ppo(
     policy = policy or GaussianActorCritic_NeuralNetwork(
         input_dim=5,
         output_dim=1,
-        hidden_dims=(128, 128, 128, 128),
-        cov=0.3
+        hidden_dims=(128, 128, 128),
+        cov=0.5
     )
     algorithm = algorithm or PPO(
         epsilon=0.2,
         c1=0.5,
         kl_coeff=0.5,
         policy=policy,
-        optimizer=torch.optim.Adam(policy.parameters(), lr=3e-4),
+        optimizer=torch.optim.Adam(policy.parameters(), lr=2e-4),
         ref_model=None,
-        updates_per_iter=16,
+        updates_per_iter=24,
         gamma=0.99,
         lam=0.95,
         entropy=0.01,
@@ -75,7 +75,7 @@ def create_cartpole_pipeline_ppo(
         worker_class=RolloutWorker,
         policy=policy,
         num_workers=10,
-        num_episodes_per_worker=5,
+        num_episodes_per_worker=8,
     )
     buffer = buffer or Rollout_Buffer(
         rollout_manager=rollout_manager,
